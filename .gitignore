@@ -1,5 +1,11 @@
 node_modules/
+dist/
 .claude/
 .config/
 .local/
 data/
+.env
+.env.*
+.DS_Store
+*.db-shm
+*.db-wal

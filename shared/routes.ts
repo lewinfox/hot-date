@@ -1,5 +1,5 @@
-import { z } from "zod";
-import { insertEventSchema, events } from "./schema";
+import { z } from 'zod';
+import { insertEventSchema, events } from './schema';
 
 export const errorSchemas = {
   validation: z.object({
@@ -51,11 +51,13 @@ export const api = {
       method: 'POST' as const,
       path: '/api/events/:slug/participants' as const,
       input: z.object({
-        name: z.string().min(1, "Name is required"),
-        availabilities: z.array(z.object({
-          date: z.string(),
-          type: z.enum(['all_day', 'morning', 'afternoon'])
-        })),
+        name: z.string().min(1, 'Name is required'),
+        availabilities: z.array(
+          z.object({
+            date: z.string(),
+            type: z.enum(['all_day', 'morning', 'afternoon']),
+          })
+        ),
       }),
       responses: {
         200: z.any(), // ParticipantWithAvailabilities
@@ -63,7 +65,7 @@ export const api = {
         404: errorSchemas.notFound,
       },
     },
-  }
+  },
 };
 
 export function buildUrl(path: string, params?: Record<string, string | number>): string {
