@@ -12,28 +12,60 @@ import { useToast } from '@/hooks/use-toast';
 import type { AvailabilityType } from '@shared/schema';
 
 export default function EventPage() {
+  // useRoute gives us the slug from the URL path (/event/:slug).
+  // We discard the first element (the match boolean) since we only need the params.
   const [, params] = useRoute('/event/:slug');
   const slug = params?.slug || '';
+
+  // useSearch returns the raw query string so we can extract ?name=... for
+  // deep-linking directly into a participant's edit session.
   const searchString = useSearch();
   const queryParams = new URLSearchParams(searchString);
   const nameFromUrl = queryParams.get('name');
 
+  // Fetch the event (including all participants and their availabilities) from
+  // the server. React Query handles caching and background re-fetching.
   const { data: event, isLoading, error } = useEvent(slug);
+
+  // Separate mutations so we can track their pending/error states independently.
   const updateAvailability = useUpdateAvailability(slug);
   const updateEvent = useUpdateEvent(slug);
   const { toast } = useToast();
 
+  // localStartDate / localEndDate mirror the server values but update immediately
+  // on every keystroke so the date inputs feel responsive. The actual server write
+  // is deferred to onBlur to avoid a network request on every character typed.
   const [localStartDate, setLocalStartDate] = useState('');
   const [localEndDate, setLocalEndDate] = useState('');
+
+  // We need an imperative handle to focus and scroll the name input when the
+  // user clicks a participant in the list below, so useRef is the right tool here
+  // (we don't want the component to re-render just because of the ref).
   const nameInputRef = useRef<HTMLInputElement>(null);
+
+  // Guards against applying the URL name more than once. Without this flag, if
+  // the user clears the name field and the component re-renders (e.g. due to a
+  // query refetch), the URL name would be re-applied and overwrite their edit.
   const hasAppliedUrlName = useRef(false);
 
+  // The name the current user is editing under. This is also used to look up
+  // their existing availability in the participant list when it changes.
   const [name, setName] = useState('');
+
+  // Availability for the current user's editing session. Stored as a Map so we
+  // get O(1) lookup by date string when rendering individual calendar cells.
+  // Map<dateString, AvailabilityType> e.g. "2025-03-15" -> "morning"
   const [selectedAvailabilities, setSelectedAvailabilities] = useState<
     Map<string, AvailabilityType>
   >(new Map());
+
+  // Drives the brief "Copied!" feedback state on the copy-link button.
   const [copied, setCopied] = useState(false);
 
+  // Apply the ?name= query param exactly once on mount (or when it first appears).
+  // We use a ref flag rather than including `name` in the dep array, because
+  // adding `name` would re-run this effect whenever the user edits the field,
+  // potentially re-applying the URL name and undoing their changes.
   useEffect(() => {
     if (nameFromUrl && !hasAppliedUrlName.current) {
       hasAppliedUrlName.current = true;
@@ -41,6 +73,10 @@ export default function EventPage() {
     }
   }, [nameFromUrl]);
 
+  // Sync the local date inputs whenever the server data changes (e.g. after
+  // another user updates the event range, or after our own save round-trips).
+  // We intentionally depend on the individual date strings rather than the whole
+  // `event` object so this doesn't run on unrelated participant updates.
   useEffect(() => {
     if (event) {
       setLocalStartDate(event.startDate ?? '');
@@ -48,6 +84,10 @@ export default function EventPage() {
     }
   }, [event?.startDate, event?.endDate]);
 
+  // When the user's name changes (typed or picked from the participant list) or
+  // the server data refreshes, reload their saved availability so they can see
+  // and edit their previous selections. We reset to an empty map when the name
+  // doesn't match any existing participant so a new user starts with a blank slate.
   useEffect(() => {
     if (event?.participants && name.trim()) {
       const existingUser = event.participants.find(
@@ -63,16 +103,46 @@ export default function EventPage() {
     }
   }, [name, event?.participants]);
 
+  // Aggregates all participant availability into structures the read-only heatmap
+  // calendar needs. We memoize because the participant list can be large and this
+  // runs on every render otherwise — the result only changes when participants or
+  // the event date range change.
   const heatmapData = useMemo(() => {
     if (!event?.participants)
       return { map: {}, total: 0, optimalDates: [], participantDateMap: {} };
 
+    // map: date -> { all_day: count, morning: count, afternoon: count }
+    // Used by the Calendar to shade cells by how many people are free.
     const map: Record<string, Record<AvailabilityType, number>> = {};
+
+    // participantDateMap: date -> [{participantIndex, type}, ...]
+    // Used by the Calendar tooltip to list who is available on each day.
     const participantDateMap: Record<string, ParticipantDateInfo[]> = {};
+
+    // Tracks unique participants per date as a Set so we don't double-count a
+    // participant if they somehow have duplicate availability rows for the same day.
     const uniqueParticipantsPerDate: Record<string, Set<number>> = {};
+
+    // Dates are stored as YYYY-MM-DD strings, so lexicographic comparison is
+    // equivalent to chronological comparison — no Date parsing needed.
+    //
+    // Use localStartDate/localEndDate (not event.startDate/event.endDate) so
+    // the filter reacts immediately when the organiser changes the date inputs,
+    // rather than waiting for the server round-trip to complete. localStartDate
+    // is always initialised from the server value on load, so it's safe to rely
+    // on here.
+    const rangeStart = localStartDate;
+    const rangeEnd = localEndDate;
 
     event.participants.forEach((p, participantIndex) => {
       p.availabilities.forEach((a) => {
+        // Skip any availability that falls outside the current event date range.
+        // This matters when the organizer narrows the range after participants
+        // have already submitted — we don't want stale out-of-range dates
+        // polluting the heatmap or the "Perfect Match!" calculation.
+        if (rangeStart && a.date < rangeStart) return;
+        if (rangeEnd && a.date > rangeEnd) return;
+
         if (!map[a.date]) {
           map[a.date] = { all_day: 0, morning: 0, afternoon: 0 };
         }
@@ -82,6 +152,9 @@ export default function EventPage() {
           uniqueParticipantsPerDate[a.date] = new Set();
         }
 
+        // Only add this participant's entry to participantDateMap once per date,
+        // even if they have multiple availability rows (shouldn't happen, but
+        // the Set guard makes this robust).
         if (!uniqueParticipantsPerDate[a.date].has(participantIndex)) {
           uniqueParticipantsPerDate[a.date].add(participantIndex);
           if (!participantDateMap[a.date]) {
@@ -95,6 +168,9 @@ export default function EventPage() {
       });
     });
 
+    // A date is "optimal" only if every single participant has marked themselves
+    // available on it. We also require at least 2 people (total > 1 guard is in
+    // the render) so a solo organiser doesn't see a "Perfect Match!" banner.
     const optimalDates = Object.entries(uniqueParticipantsPerDate)
       .filter(
         ([_, participants]) =>
@@ -109,8 +185,14 @@ export default function EventPage() {
       optimalDates,
       participantDateMap,
     };
-  }, [event?.participants]);
+    // localStartDate/localEndDate are included (not the server event dates) so
+    // the heatmap re-filters as soon as the organiser edits the date inputs,
+    // keeping the "Perfect Match!" banner in sync with the visible calendar range.
+  }, [event?.participants, localStartDate, localEndDate]);
 
+  // Cycles a date through the four availability states: unset → all_day →
+  // morning → afternoon → unset. We copy the Map first because React state must
+  // be treated as immutable — mutating the existing Map wouldn't trigger a re-render.
   const handleToggleDate = (dateStr: string) => {
     const newAvailabilities = new Map(selectedAvailabilities);
     const currentType = newAvailabilities.get(dateStr);
@@ -122,11 +204,15 @@ export default function EventPage() {
     } else if (currentType === 'morning') {
       newAvailabilities.set(dateStr, 'afternoon');
     } else {
+      // 'afternoon' → remove entirely (treat as unavailable)
       newAvailabilities.delete(dateStr);
     }
     setSelectedAvailabilities(newAvailabilities);
   };
 
+  // Serialises the Map to the array format the API expects and fires the mutation.
+  // We validate the name here (rather than disabling the button) so the error
+  // message is surfaced clearly if someone manages to submit without a name.
   const handleSave = () => {
     if (!name.trim()) {
       toast({
@@ -150,6 +236,9 @@ export default function EventPage() {
     });
   };
 
+  // Clicking a participant in the list below loads their name into the name field
+  // and scrolls/focuses the input so the user can immediately start editing.
+  // The useEffect above handles loading their saved availability from the event data.
   const selectParticipant = (participantName: string) => {
     setName(participantName);
     nameInputRef.current?.focus();
@@ -160,11 +249,16 @@ export default function EventPage() {
     });
   };
 
+  // Produces the deep-link URL that drops a specific participant straight into
+  // edit mode. The name is URL-encoded to handle spaces and special characters.
   const getParticipantEditUrl = (participantName: string) => {
     const baseUrl = `${window.location.origin}/event/${slug}`;
     return `${baseUrl}?name=${encodeURIComponent(participantName)}`;
   };
 
+  // We reset `copied` after 2 s so the button reverts to its normal state.
+  // The timeout is short enough that it doesn't feel like a flash but long enough
+  // that users can register the confirmation.
   const copyLink = () => {
     navigator.clipboard.writeText(`${window.location.origin}/event/${slug}`);
     setCopied(true);
@@ -172,6 +266,8 @@ export default function EventPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Show a skeleton pulse while the first fetch is in flight so the layout
+  // doesn't shift when the data arrives.
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -183,6 +279,9 @@ export default function EventPage() {
     );
   }
 
+  // Treat a missing event the same as a network error — the slug was either
+  // never created or has been deleted. We check both so TypeScript knows `event`
+  // is non-null below this point.
   if (error || !event) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 text-center">
@@ -198,6 +297,9 @@ export default function EventPage() {
 
   return (
     <div className="min-h-screen pb-24">
+      {/* Sticky header keeps the event title and date range always visible.
+          backdrop-blur-xl lets content scroll behind it without the header
+          becoming fully opaque, preserving the sense of depth. */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -211,6 +313,10 @@ export default function EventPage() {
               )}
               <div className="flex items-center gap-2 mt-1.5">
                 <CalendarIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                {/* The date inputs use localStartDate/localEndDate (not event.startDate)
+                    so they update immediately on typing. The actual server write is
+                    deferred to onBlur — we only save when the user leaves the field
+                    AND the value has actually changed, avoiding spurious mutations. */}
                 <input
                   type="date"
                   value={localStartDate}
@@ -256,6 +362,10 @@ export default function EventPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* "Perfect Match!" banner — only shown when there are dates where
+            every participant is available AND there are at least two people
+            (a single-person "match" isn't meaningful). The banner slides in
+            from above via framer-motion to draw attention without being jarring. */}
         {heatmapData.optimalDates.length > 0 && heatmapData.total > 1 && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -289,13 +399,18 @@ export default function EventPage() {
           </motion.div>
         )}
 
+        {/* Two-column layout: left = the current user's availability editor,
+            right = the read-only group heatmap. They stack on mobile. */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24">
+          {/* ── Left column: individual availability editor ── */}
           <section className="flex flex-col gap-8">
             <div className="space-y-4 border-b border-border pb-6">
               <h2 className="text-2xl font-bold flex items-center gap-2">
                 <UserCheck className="w-6 h-6 text-primary" />
                 Your Availability
               </h2>
+              {/* Inline instructions avoid a separate help modal and keep the
+                  interaction model visible at all times for first-time users. */}
               <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 text-sm text-muted-foreground">
                 <p className="font-semibold text-primary mb-1">How to mark your time:</p>
                 <ul className="space-y-1 list-disc list-inside">
@@ -320,6 +435,9 @@ export default function EventPage() {
               </div>
             </div>
 
+            {/* The name + save controls are sticky so they remain accessible
+                while the user scrolls through a multi-month calendar below.
+                top-24 offsets below the sticky header (which is ~96 px tall). */}
             <div className="sticky top-24 z-10 pt-2 pb-4">
               <div className="flex flex-col gap-3 bg-card/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4 neon-card">
                 <h2 className="text-2xl font-bold neon-label">Your Name</h2>
@@ -333,6 +451,8 @@ export default function EventPage() {
                   />
                   <Button
                     onClick={handleSave}
+                    // Disable while a name hasn't been entered or while the
+                    // previous save is still in-flight to prevent double-submits.
                     disabled={!name.trim() || updateAvailability.isPending}
                     isLoading={updateAvailability.isPending}
                     className="shrink-0"
@@ -344,13 +464,17 @@ export default function EventPage() {
               </div>
             </div>
 
+            {/* Interactive calendar — uses localStartDate/localEndDate so the
+                visible range updates immediately when the organiser changes the
+                date inputs, consistent with the heatmap and banner behaviour. */}
             <div className="bg-card p-4 sm:p-8 rounded-[2rem] shadow-soft border border-border/50">
               <Calendar
-                startDate={event.startDate ? new Date(event.startDate) : undefined}
-                endDate={event.endDate ? new Date(event.endDate) : undefined}
+                startDate={localStartDate ? new Date(localStartDate) : undefined}
+                endDate={localEndDate ? new Date(localEndDate) : undefined}
                 selectedAvailabilities={selectedAvailabilities}
                 onToggleDate={handleToggleDate}
               />
+              {/* Visual legend explaining what each cell style means. */}
               <div className="mt-6 flex flex-wrap gap-4 text-xs font-medium text-muted-foreground justify-center border-t border-border pt-6">
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded-sm bg-primary" />
@@ -376,6 +500,7 @@ export default function EventPage() {
             </div>
           </section>
 
+          {/* ── Right column: read-only group heatmap ── */}
           <section className="flex flex-col gap-8">
             <div className="space-y-2 border-b border-border pb-6">
               <h2 className="text-2xl font-bold flex items-center gap-2">
@@ -387,6 +512,7 @@ export default function EventPage() {
 
             <div className="bg-secondary/30 p-4 sm:p-8 rounded-[2rem] border border-border/50">
               {heatmapData.total === 0 ? (
+                // Empty state — shown until at least one person saves availability.
                 <div className="text-center py-12 opacity-50">
                   <CalendarIcon className="w-12 h-12 mx-auto mb-4" />
                   <p>
@@ -397,16 +523,24 @@ export default function EventPage() {
                 </div>
               ) : (
                 <>
+                  {/* Read-only Calendar receives pre-aggregated heatmap data
+                      rather than raw participant arrays so it doesn't need to
+                      re-aggregate on every render. participantDateMap lets it
+                      render per-person colour chips in the day tooltip. */}
                   <Calendar
                     readonly
-                    startDate={event.startDate ? new Date(event.startDate) : undefined}
-                    endDate={event.endDate ? new Date(event.endDate) : undefined}
+                    startDate={localStartDate ? new Date(localStartDate) : undefined}
+                    endDate={localEndDate ? new Date(localEndDate) : undefined}
                     availabilityMap={heatmapData.map}
                     totalParticipants={heatmapData.total}
                     participantDateMap={heatmapData.participantDateMap}
                     participantColors={PARTICIPANT_COLORS}
                     participantNames={event.participants.map((p) => p.name)}
                   />
+                  {/* Colour-coded legend so viewers can match heatmap colours
+                      to specific participants. The gold "Everyone" swatch only
+                      appears when there are multiple participants because a
+                      unanimous match requires at least two people. */}
                   <div className="mt-6 flex flex-wrap gap-3 text-xs font-medium text-muted-foreground justify-center border-t border-border pt-6">
                     {event.participants.map((p, i) => (
                       <div key={p.id} className="flex items-center gap-1.5">
@@ -433,6 +567,9 @@ export default function EventPage() {
               )}
             </div>
 
+            {/* Participant list — lets any viewer click a name to load that
+                person's availability into the left-hand editor, or copy their
+                personal deep-link so they can edit it themselves later. */}
             {event.participants.length > 0 && (
               <div className="mt-4" data-testid="participant-list">
                 <h3 className="font-semibold text-lg mb-3">
@@ -442,14 +579,20 @@ export default function EventPage() {
                   Click a name to edit their availability, or copy their personal edit link.
                 </p>
                 <div className="flex flex-col gap-2">
+                  {/* AnimatePresence lets framer-motion animate new participants
+                      in as they are added without re-animating existing ones. */}
                   <AnimatePresence>
                     {event.participants.map((p, i) => {
+                      // Case-insensitive match so "jane" and "Jane" are treated
+                      // as the same person in the editing context.
                       const isSelected = name.trim().toLowerCase() === p.name.toLowerCase();
                       return (
                         <motion.div
                           key={p.id}
                           initial={{ opacity: 0, scale: 0.8 }}
                           animate={{ opacity: 1, scale: 1 }}
+                          // Stagger the entrance animation by participant index
+                          // so items cascade in rather than all appearing at once.
                           transition={{ delay: i * 0.05 }}
                           className={`flex items-center justify-between px-4 py-3 bg-card border rounded-xl text-sm font-medium shadow-sm transition-all duration-200 ${isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-border'}`}
                           data-testid={`participant-${p.id}`}
@@ -468,6 +611,8 @@ export default function EventPage() {
                               }}
                             />
                             <span className="truncate">{p.name}</span>
+                            {/* Show the raw count from the server so it stays
+                                accurate even if the user hasn't saved yet. */}
                             <span className="text-muted-foreground text-xs bg-secondary px-1.5 rounded-md shrink-0">
                               {p.availabilities.length} days
                             </span>
@@ -503,6 +648,8 @@ export default function EventPage() {
           </section>
         </div>
 
+        {/* Footer trust signals — kept below the fold intentionally so they
+            don't compete with the primary interaction (picking dates). */}
         <div className="mt-24 max-w-2xl mx-auto border-t border-border/50 pt-8 pb-12">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
             <div className="flex items-start gap-3">
