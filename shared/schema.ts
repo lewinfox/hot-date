@@ -202,14 +202,23 @@ export type Participant = typeof participants.$inferSelect;
 export type Availability = typeof availabilities.$inferSelect;
 
 /**
- * AvailabilityType — The three valid values for the `type` column.
+ * availabilityTypeSchema — Zod enum for the three valid availability types.
  *
- * A TypeScript string union type restricts the value to exactly one of these
- * three strings. This is narrower than `string` — TypeScript will error if
- * code tries to assign any other string value. The Calendar component uses
- * this type to determine how to render each availability cell.
+ * Defining this as a Zod enum (rather than a plain TypeScript union) means the
+ * values live in one place and can be reused for runtime validation. The
+ * TypeScript type `AvailabilityType` is then derived from the schema via
+ * `z.infer<>`, so the two are always in sync — changing this array updates
+ * both the runtime validator and the compile-time type simultaneously.
+ *
+ * The Calendar component uses this type to determine how to render each cell:
+ *   'all_day'   — the person is available all day.
+ *   'morning'   — available in the morning only (top half of cell).
+ *   'afternoon' — available in the afternoon only (bottom half of cell).
  */
-export type AvailabilityType = 'all_day' | 'morning' | 'afternoon';
+export const availabilityTypeSchema = z.enum(['all_day', 'morning', 'afternoon']);
+
+/** Derived TypeScript type — always in sync with `availabilityTypeSchema`. */
+export type AvailabilityType = z.infer<typeof availabilityTypeSchema>;
 
 /**
  * ParticipantWithAvailabilities — A participant row with their availabilities nested.

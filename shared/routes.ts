@@ -36,7 +36,7 @@
  */
 
 import { z } from 'zod';
-import { insertEventSchema, events } from './schema';
+import { insertEventSchema, events, availabilityTypeSchema } from './schema';
 
 /**
  * errorSchemas — Reusable Zod schemas for standard error response shapes.
@@ -190,7 +190,7 @@ export const api = {
         availabilities: z.array(
           z.object({
             date: z.string(),
-            type: z.enum(['all_day', 'morning', 'afternoon']),
+            type: availabilityTypeSchema,
           })
         ),
       }),
