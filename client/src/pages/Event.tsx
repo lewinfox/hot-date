@@ -71,8 +71,14 @@ export default function EventPage() {
     const participantDateMap: Record<string, ParticipantDateInfo[]> = {};
     const uniqueParticipantsPerDate: Record<string, Set<number>> = {};
 
+    const rangeStart = event.startDate;
+    const rangeEnd = event.endDate;
+
     event.participants.forEach((p, participantIndex) => {
       p.availabilities.forEach((a) => {
+        if (rangeStart && a.date < rangeStart) return;
+        if (rangeEnd && a.date > rangeEnd) return;
+
         if (!map[a.date]) {
           map[a.date] = { all_day: 0, morning: 0, afternoon: 0 };
         }
@@ -109,7 +115,7 @@ export default function EventPage() {
       optimalDates,
       participantDateMap,
     };
-  }, [event?.participants]);
+  }, [event?.participants, event?.startDate, event?.endDate]);
 
   const handleToggleDate = (dateStr: string) => {
     const newAvailabilities = new Map(selectedAvailabilities);
