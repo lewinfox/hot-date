@@ -157,8 +157,8 @@ export const api = {
       method: 'PATCH' as const,
       path: '/api/events/:slug' as const,
       input: z.object({
-        startDate: z.string().optional(),
-        endDate: z.string().optional(),
+        startDate: z.string().date().optional(),
+        endDate: z.string().date().optional(),
       }),
       responses: {
         200: z.custom<typeof events.$inferSelect>(),
@@ -181,7 +181,7 @@ export const api = {
      *
      * `availabilities: z.array(z.object({ date, type }))`:
      *   An array of availability records. Each entry must have:
-     *     - `date`: any string (further format validation could be added here).
+     *     - `date`: a YYYY-MM-DD string, validated by `z.string().date()`.
      *     - `type`: exactly one of the three enum values. `z.enum([...])` will
      *       reject any other string, producing a validation error.
      *   An empty array (`[]`) is valid — it means the person has no availability.
@@ -193,7 +193,7 @@ export const api = {
         name: z.string().min(1, 'Name is required'),
         availabilities: z.array(
           z.object({
-            date: z.string(),
+            date: z.string().date(),
             type: availabilityTypeSchema,
           })
         ),
