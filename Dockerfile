@@ -12,6 +12,17 @@ COPY . .
 RUN npx drizzle-kit generate
 RUN npm run build
 
+# Dev stage (used by devcontainer)
+FROM node:20-bookworm AS dev
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    vim \
+    && rm -rf /var/lib/apt/lists/*
+
+USER node
+
+WORKDIR /home/node
+
 # Production stage
 FROM node:20-alpine AS runner
 

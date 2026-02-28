@@ -1,10 +1,14 @@
 {
   "name": "Hot Date",
-  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-20-bookworm",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "target": "dev"
+  },
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
   // Install deps once after the container is created.
   // Run `npm run dev` in the integrated terminal to start the dev server.
   // The SQLite database is created automatically at ./data/hot-date.db on first run.
+  "remoteUser": "node",
   "updateRemoteUserUID": true,
   "postCreateCommand": "npm install",
   "mounts": [
