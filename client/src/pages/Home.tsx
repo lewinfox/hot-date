@@ -18,7 +18,7 @@ export default function Home() {
     return () => clearTimeout(t);
   }, []);
 
-const [title, setTitle] = useState('');
+  const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(addMonths(new Date(), 3), 'yyyy-MM-dd'));
@@ -26,18 +26,18 @@ const [title, setTitle] = useState('');
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
-    
+
     createEvent.mutate(
-      { 
-        title, 
-        description, 
-        startDate, 
-        endDate 
+      {
+        title,
+        description,
+        startDate,
+        endDate,
       },
       {
         onSuccess: (data) => {
           setLocation(`/event/${data.slug}`);
-        }
+        },
       }
     );
   };
@@ -69,127 +69,159 @@ const [title, setTitle] = useState('');
         )}
       </AnimatePresence>
 
-    <div className="min-h-screen flex flex-col items-center overflow-x-hidden relative">
-      {/* Logo: absolutely positioned — acts as a decorative background header */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: splashDone ? 1 : 0 }}
-        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-        className="absolute top-0 left-0 right-0 px-4 pt-8 sm:pt-12"
-      >
-        <img
-          src={hotDateLogo}
-          alt="Hot Date"
-          className="w-full h-auto"
-          style={{
-            maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)',
-            WebkitMaskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)',
-          }}
-        />
-      </motion.div>
+      <div className="min-h-screen flex flex-col items-center overflow-x-hidden relative">
+        {/* Logo: absolutely positioned — acts as a decorative background header */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: splashDone ? 1 : 0 }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          className="absolute top-0 left-0 right-0 px-4 pt-8 sm:pt-12"
+        >
+          <img
+            src={hotDateLogo}
+            alt="Hot Date"
+            className="w-full h-auto"
+            style={{
+              maskImage:
+                'linear-gradient(to right, transparent, black 10%, black 90%, transparent)',
+              WebkitMaskImage:
+                'linear-gradient(to right, transparent, black 10%, black 90%, transparent)',
+            }}
+          />
+        </motion.div>
 
-      {/* Spacer — controls how much of the logo peeks above the form */}
-      <div className="h-16 sm:h-24 w-full shrink-0" />
+        {/* Spacer — controls how much of the logo peeks above the form */}
+        <div className="h-16 sm:h-24 w-full shrink-0" />
 
-      {/* Form: normal flow + z-10, reliably above the absolute logo */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: splashDone ? 1 : 0, y: splashDone ? 0 : 20 }}
-        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-        className="relative z-10 w-full max-w-2xl mx-auto flex flex-col gap-12 px-4 sm:px-8 pb-12"
-      >
+        {/* Form: normal flow + z-10, reliably above the absolute logo */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: splashDone ? 1 : 0, y: splashDone ? 0 : 20 }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          className="relative z-10 w-full max-w-2xl mx-auto flex flex-col gap-12 px-4 sm:px-8 pb-12"
+        >
+          <div className="bg-card/90 backdrop-blur-sm p-6 sm:p-10 rounded-[2rem] border neon-card">
+            <div className="flex items-center gap-3 mb-8">
+              <Sparkles
+                className="text-pink-400 drop-shadow-[0_0_8px_rgba(255,0,144,0.8)]"
+                size={24}
+              />
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-cyan-300 via-white to-pink-300 bg-clip-text text-transparent">
+                Create an event
+              </h2>
+            </div>
 
-        <div className="bg-card/90 backdrop-blur-sm p-6 sm:p-10 rounded-[2rem] border neon-card">
-          <div className="flex items-center gap-3 mb-8">
-            <Sparkles className="text-pink-400 drop-shadow-[0_0_8px_rgba(255,0,144,0.8)]" size={24} />
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-cyan-300 via-white to-pink-300 bg-clip-text text-transparent">Create an event</h2>
-          </div>
-
-          <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-            <Input
-              label="Event Name"
-              placeholder="e.g. Summer Cabin Trip"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-              autoFocus
-              className="text-lg py-4"
-            />
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-hidden">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-6">
               <Input
-                type="date"
-                label="Earliest Date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                label="Event Name"
+                placeholder="e.g. Summer Cabin Trip"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
                 required
+                autoFocus
+                className="text-lg py-4"
               />
-              <Input
-                type="date"
-                label="Latest Date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                required
-              />
-            </div>
 
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium neon-label">
-                Description <span className="text-muted-foreground font-normal">(Optional)</span>
-              </label>
-              <textarea
-                placeholder="What's this about?"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={3}
-                className="w-full px-4 py-3 rounded-xl bg-secondary/50 border text-foreground placeholder:text-muted-foreground focus:outline-none transition-all duration-200 resize-none neon-input"
-              />
-            </div>
-
-            <Button
-              type="submit"
-              size="lg"
-              className="mt-2 group"
-              isLoading={createEvent.isPending}
-              disabled={!title.trim()}
-            >
-              Get Started
-              <ArrowRight className="ml-2 w-5 h-5 transition-transform group-hover:translate-x-1" />
-            </Button>
-          </form>
-
-          <div className="mt-8 pt-8 border-t border-border/50">
-            <div className="flex items-start gap-3 text-muted-foreground">
-              <div className="p-2 bg-secondary/50 rounded-lg shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-lock"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-hidden">
+                <Input
+                  type="date"
+                  label="Earliest Date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  required
+                />
+                <Input
+                  type="date"
+                  label="Latest Date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  required
+                />
               </div>
-              <div className="text-xs leading-relaxed">
-                <p className="font-semibold text-foreground mb-1">Secure & Simple</p>
-                <p>No passwords required—access your events directly via your unique, secure URL.</p>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        <div>
-          <h3 className="text-center text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-8">How it works</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            {[
-              { icon: CalendarPlus, step: "1", text: "Create an event" },
-              { icon: Share2, step: "2", text: "Share the link with the people you want to invite" },
-              { icon: CalendarCheck, step: "3", text: "Compare the dates where everyone's available" },
-            ].map((item) => (
-              <div key={item.step} className="flex flex-col items-center text-center gap-3 px-4">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <item.icon className="w-5 h-5 text-primary" />
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium neon-label">
+                  Description <span className="text-muted-foreground font-normal">(Optional)</span>
+                </label>
+                <textarea
+                  placeholder="What's this about?"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={3}
+                  className="w-full px-4 py-3 rounded-xl bg-secondary/50 border text-foreground placeholder:text-muted-foreground focus:outline-none transition-all duration-200 resize-none neon-input"
+                />
+              </div>
+
+              <Button
+                type="submit"
+                size="lg"
+                className="mt-2 group"
+                isLoading={createEvent.isPending}
+                disabled={!title.trim()}
+              >
+                Get Started
+                <ArrowRight className="ml-2 w-5 h-5 transition-transform group-hover:translate-x-1" />
+              </Button>
+            </form>
+
+            <div className="mt-8 pt-8 border-t border-border/50">
+              <div className="flex items-start gap-3 text-muted-foreground">
+                <div className="p-2 bg-secondary/50 rounded-lg shrink-0">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="lucide lucide-lock"
+                  >
+                    <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
                 </div>
-                <p className="text-sm text-muted-foreground leading-relaxed">{item.text}</p>
+                <div className="text-xs leading-relaxed">
+                  <p className="font-semibold text-foreground mb-1">Secure & Simple</p>
+                  <p>
+                    No passwords required—access your events directly via your unique, secure URL.
+                  </p>
+                </div>
               </div>
-            ))}
+            </div>
           </div>
-        </div>
-      </motion.div>
-    </div>
+
+          <div>
+            <h3 className="text-center text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-8">
+              How it works
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              {[
+                { icon: CalendarPlus, step: '1', text: 'Create an event' },
+                {
+                  icon: Share2,
+                  step: '2',
+                  text: 'Share the link with the people you want to invite',
+                },
+                {
+                  icon: CalendarCheck,
+                  step: '3',
+                  text: "Compare the dates where everyone's available",
+                },
+              ].map((item) => (
+                <div key={item.step} className="flex flex-col items-center text-center gap-3 px-4">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <item.icon className="w-5 h-5 text-primary" />
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{item.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      </div>
     </>
   );
 }

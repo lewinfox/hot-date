@@ -45,8 +45,16 @@ describe('DatabaseStorage.createEvent', () => {
   });
 
   it('assigns unique slugs to different events', async () => {
-    const a = await storage.createEvent({ title: 'Event A', startDate: '2025-07-01', endDate: '2025-07-31' });
-    const b = await storage.createEvent({ title: 'Event B', startDate: '2025-08-01', endDate: '2025-08-31' });
+    const a = await storage.createEvent({
+      title: 'Event A',
+      startDate: '2025-07-01',
+      endDate: '2025-07-31',
+    });
+    const b = await storage.createEvent({
+      title: 'Event B',
+      startDate: '2025-08-01',
+      endDate: '2025-08-31',
+    });
 
     expect(a.slug).not.toBe(b.slug);
   });
@@ -70,7 +78,11 @@ describe('DatabaseStorage.getEventBySlug', () => {
   });
 
   it('returns the event with an empty participants array when no one has joined', async () => {
-    const created = await storage.createEvent({ title: 'Solo Event', startDate: '2025-06-01', endDate: '2025-06-30' });
+    const created = await storage.createEvent({
+      title: 'Solo Event',
+      startDate: '2025-06-01',
+      endDate: '2025-06-30',
+    });
     const fetched = await storage.getEventBySlug(created.slug);
 
     expect(fetched).toBeDefined();
@@ -79,7 +91,11 @@ describe('DatabaseStorage.getEventBySlug', () => {
   });
 
   it('returns the event with participants and their availabilities', async () => {
-    const event = await storage.createEvent({ title: 'Group Event', startDate: '2025-06-01', endDate: '2025-06-30' });
+    const event = await storage.createEvent({
+      title: 'Group Event',
+      startDate: '2025-06-01',
+      endDate: '2025-06-30',
+    });
 
     await storage.addOrUpdateParticipant(event.slug, {
       name: 'Alice',
@@ -90,7 +106,9 @@ describe('DatabaseStorage.getEventBySlug', () => {
 
     expect(fetched!.participants).toHaveLength(1);
     expect(fetched!.participants[0].name).toBe('Alice');
-    expect(fetched!.participants[0].availabilities).toEqual([{ date: '2025-06-10', type: 'all_day' }]);
+    expect(fetched!.participants[0].availabilities).toEqual([
+      { date: '2025-06-10', type: 'all_day' },
+    ]);
   });
 });
 
@@ -102,7 +120,11 @@ describe('DatabaseStorage.addOrUpdateParticipant', () => {
   });
 
   it('creates a new participant with availabilities', async () => {
-    const event = await storage.createEvent({ title: 'Meeting', startDate: '2025-06-01', endDate: '2025-06-30' });
+    const event = await storage.createEvent({
+      title: 'Meeting',
+      startDate: '2025-06-01',
+      endDate: '2025-06-30',
+    });
 
     const participant = await storage.addOrUpdateParticipant(event.slug, {
       name: 'Charlie',
@@ -119,7 +141,11 @@ describe('DatabaseStorage.addOrUpdateParticipant', () => {
   });
 
   it('replaces availabilities when the same participant name is resubmitted', async () => {
-    const event = await storage.createEvent({ title: 'Standup', startDate: '2025-06-01', endDate: '2025-06-30' });
+    const event = await storage.createEvent({
+      title: 'Standup',
+      startDate: '2025-06-01',
+      endDate: '2025-06-30',
+    });
 
     await storage.addOrUpdateParticipant(event.slug, {
       name: 'Dana',
@@ -136,13 +162,17 @@ describe('DatabaseStorage.addOrUpdateParticipant', () => {
 
     // Confirm old availability is gone via a fresh fetch
     const fetched = await storage.getEventBySlug(event.slug);
-    const dana = fetched!.participants.find((p: { name: string; }) => p.name === 'Dana')!;
+    const dana = fetched!.participants.find((p: { name: string }) => p.name === 'Dana')!;
     expect(dana.availabilities).toHaveLength(1);
     expect(dana.availabilities[0].date).toBe('2025-06-15');
   });
 
   it('handles a participant with no availabilities', async () => {
-    const event = await storage.createEvent({ title: 'Empty', startDate: '2025-06-01', endDate: '2025-06-30' });
+    const event = await storage.createEvent({
+      title: 'Empty',
+      startDate: '2025-06-01',
+      endDate: '2025-06-30',
+    });
 
     const participant = await storage.addOrUpdateParticipant(event.slug, {
       name: 'Eve',
@@ -153,7 +183,11 @@ describe('DatabaseStorage.addOrUpdateParticipant', () => {
   });
 
   it('supports multiple distinct participants on the same event', async () => {
-    const event = await storage.createEvent({ title: 'Shared', startDate: '2025-06-01', endDate: '2025-06-30' });
+    const event = await storage.createEvent({
+      title: 'Shared',
+      startDate: '2025-06-01',
+      endDate: '2025-06-30',
+    });
 
     await storage.addOrUpdateParticipant(event.slug, {
       name: 'Frank',
@@ -176,7 +210,11 @@ describe('DatabaseStorage.updateEventDates', () => {
   });
 
   it('updates startDate only', async () => {
-    const event = await storage.createEvent({ title: 'Date Test', startDate: '2025-06-01', endDate: '2025-06-30' });
+    const event = await storage.createEvent({
+      title: 'Date Test',
+      startDate: '2025-06-01',
+      endDate: '2025-06-30',
+    });
 
     const updated = await storage.updateEventDates(event.slug, '2025-07-01', undefined);
 
@@ -185,7 +223,11 @@ describe('DatabaseStorage.updateEventDates', () => {
   });
 
   it('updates endDate only', async () => {
-    const event = await storage.createEvent({ title: 'Date Test', startDate: '2025-06-01', endDate: '2025-06-30' });
+    const event = await storage.createEvent({
+      title: 'Date Test',
+      startDate: '2025-06-01',
+      endDate: '2025-06-30',
+    });
 
     const updated = await storage.updateEventDates(event.slug, undefined, '2025-08-31');
 
@@ -194,7 +236,11 @@ describe('DatabaseStorage.updateEventDates', () => {
   });
 
   it('updates both startDate and endDate', async () => {
-    const event = await storage.createEvent({ title: 'Date Test', startDate: '2025-06-01', endDate: '2025-06-30' });
+    const event = await storage.createEvent({
+      title: 'Date Test',
+      startDate: '2025-06-01',
+      endDate: '2025-06-30',
+    });
 
     const updated = await storage.updateEventDates(event.slug, '2025-09-01', '2025-09-30');
 
@@ -203,7 +249,11 @@ describe('DatabaseStorage.updateEventDates', () => {
   });
 
   it('persists the change so getEventBySlug reflects the new dates', async () => {
-    const event = await storage.createEvent({ title: 'Persist Test', startDate: '2025-06-01', endDate: '2025-06-30' });
+    const event = await storage.createEvent({
+      title: 'Persist Test',
+      startDate: '2025-06-01',
+      endDate: '2025-06-30',
+    });
 
     await storage.updateEventDates(event.slug, '2025-10-01', '2025-10-31');
 
@@ -241,32 +291,56 @@ describe('DatabaseStorage.cleanupExpiredEvents', () => {
   });
 
   it('returns 0 when no events are past the grace period', async () => {
-    await storage.createEvent({ title: 'Future', startDate: relativeDate(-10), endDate: relativeDate(30) });
-    await storage.createEvent({ title: 'Ending Soon', startDate: relativeDate(-5), endDate: relativeDate(1) });
+    await storage.createEvent({
+      title: 'Future',
+      startDate: relativeDate(-10),
+      endDate: relativeDate(30),
+    });
+    await storage.createEvent({
+      title: 'Ending Soon',
+      startDate: relativeDate(-5),
+      endDate: relativeDate(1),
+    });
 
     expect(await storage.cleanupExpiredEvents(30)).toBe(0);
   });
 
   it('deletes an expired event and returns the count', async () => {
-    await storage.createEvent({ title: 'Old Event', startDate: '2020-01-01', endDate: '2020-06-01' });
+    await storage.createEvent({
+      title: 'Old Event',
+      startDate: '2020-01-01',
+      endDate: '2020-06-01',
+    });
 
     expect(await storage.cleanupExpiredEvents(30)).toBe(1);
   });
 
   it('does not delete an event that ended exactly graceDays ago', async () => {
-    await storage.createEvent({ title: 'Boundary', startDate: relativeDate(-40), endDate: relativeDate(-30) });
+    await storage.createEvent({
+      title: 'Boundary',
+      startDate: relativeDate(-40),
+      endDate: relativeDate(-30),
+    });
 
     expect(await storage.cleanupExpiredEvents(30)).toBe(0);
   });
 
   it('deletes an event that ended one day past the grace period', async () => {
-    await storage.createEvent({ title: 'Just Expired', startDate: relativeDate(-40), endDate: relativeDate(-31) });
+    await storage.createEvent({
+      title: 'Just Expired',
+      startDate: relativeDate(-40),
+      endDate: relativeDate(-31),
+    });
 
     expect(await storage.cleanupExpiredEvents(30)).toBe(1);
   });
 
   it('cascades to delete participants and availabilities', async () => {
-    const event = await storage.createEvent({ title: 'Old With Data', startDate: '2020-01-01', endDate: '2020-06-01' });
+    const event = await storage.createEvent({
+      title: 'Old With Data',
+      startDate: '2020-01-01',
+      endDate: '2020-06-01',
+    });
     await storage.addOrUpdateParticipant(event.slug, {
       name: 'Alice',
       availabilities: [{ date: '2020-03-01', type: 'all_day' }],
@@ -281,15 +355,25 @@ describe('DatabaseStorage.cleanupExpiredEvents', () => {
     const { db } = await import('../../server/db');
     const { participants, availabilities } = await import('../../shared/schema');
     const { eq } = await import('drizzle-orm');
-    const remainingParticipants = await db.select().from(participants).where(eq(participants.eventId, event.id));
-    const remainingAvailabilities = await db.select().from(availabilities).where(eq(availabilities.eventId, event.id));
+    const remainingParticipants = await db
+      .select()
+      .from(participants)
+      .where(eq(participants.eventId, event.id));
+    const remainingAvailabilities = await db
+      .select()
+      .from(availabilities)
+      .where(eq(availabilities.eventId, event.id));
     expect(remainingParticipants).toHaveLength(0);
     expect(remainingAvailabilities).toHaveLength(0);
   });
 
   it('only deletes expired events, leaving current ones intact', async () => {
     await storage.createEvent({ title: 'Old', startDate: '2020-01-01', endDate: '2020-06-01' });
-    const current = await storage.createEvent({ title: 'Current', startDate: relativeDate(-5), endDate: relativeDate(30) });
+    const current = await storage.createEvent({
+      title: 'Current',
+      startDate: relativeDate(-5),
+      endDate: relativeDate(30),
+    });
 
     const deleted = await storage.cleanupExpiredEvents(30);
 

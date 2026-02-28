@@ -109,7 +109,7 @@ services:
   app:
     image: ghcr.io/lewinfox/hot-date:latest
     ports:
-      - "5000:5000"
+      - '5000:5000'
     volumes:
       - db_data:/data
     environment:

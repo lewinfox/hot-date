@@ -1,13 +1,10 @@
-import type { Express } from "express";
-import type { Server } from "http";
-import { storage } from "./storage";
-import { api } from "@shared/routes";
-import { z } from "zod";
+import type { Express } from 'express';
+import type { Server } from 'http';
+import { storage } from './storage';
+import { api } from '@shared/routes';
+import { z } from 'zod';
 
-export async function registerRoutes(
-  httpServer: Server,
-  app: Express
-): Promise<Server> {
+export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
   app.post(api.events.create.path, async (req, res) => {
     try {
       const input = api.events.create.input.parse(req.body);
@@ -21,7 +18,7 @@ export async function registerRoutes(
           field: err.errors[0].path.join('.'),
         });
       } else {
-        res.status(500).json({ message: "Internal server error" });
+        res.status(500).json({ message: 'Internal server error' });
       }
     }
   });
@@ -30,11 +27,11 @@ export async function registerRoutes(
     try {
       const event = await storage.getEventBySlug(req.params.slug);
       if (!event) {
-        return res.status(404).json({ message: "Event not found" });
+        return res.status(404).json({ message: 'Event not found' });
       }
       res.json(event);
     } catch (err) {
-      res.status(500).json({ message: "Internal server error" });
+      res.status(500).json({ message: 'Internal server error' });
     }
   });
 
@@ -43,14 +40,16 @@ export async function registerRoutes(
       const input = api.events.update.input.parse(req.body);
       const event = await storage.updateEventDates(req.params.slug, input.startDate, input.endDate);
       if (!event) {
-        return res.status(404).json({ message: "Event not found" });
+        return res.status(404).json({ message: 'Event not found' });
       }
       res.json(event);
     } catch (err) {
       if (err instanceof z.ZodError) {
-        res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
+        res
+          .status(400)
+          .json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
       } else {
-        res.status(500).json({ message: "Internal server error" });
+        res.status(500).json({ message: 'Internal server error' });
       }
     }
   });
@@ -67,10 +66,10 @@ export async function registerRoutes(
           message: err.errors[0].message,
           field: err.errors[0].path.join('.'),
         });
-      } else if (err instanceof Error && err.message === "Event not found") {
-        res.status(404).json({ message: "Event not found" });
+      } else if (err instanceof Error && err.message === 'Event not found') {
+        res.status(404).json({ message: 'Event not found' });
       } else {
-        res.status(500).json({ message: "Internal server error" });
+        res.status(500).json({ message: 'Internal server error' });
       }
     }
   });

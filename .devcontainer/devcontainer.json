@@ -16,9 +16,7 @@
     "source=${localEnv:HOME}/.claude,target=/home/node/.claude,type=bind",
     "source=${localEnv:HOME}/.claude.json,target=/home/node/.claude.json,type=bind"
   ],
-  "forwardPorts": [
-    5000
-  ],
+  "forwardPorts": [5000],
   "portsAttributes": {
     "5000": {
       "label": "Hot Date",

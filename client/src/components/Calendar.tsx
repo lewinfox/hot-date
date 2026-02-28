@@ -68,7 +68,6 @@ export function Calendar({
   participantColors = PARTICIPANT_COLORS,
   participantNames = [],
 }: CalendarProps) {
-
   const today = startOfToday();
   const [hoveredDate, setHoveredDate] = useState<string | null>(null);
   const [tooltipAnchor, setTooltipAnchor] = useState<DOMRect | null>(null);
@@ -76,7 +75,7 @@ export function Calendar({
   const tooltipParticipants = useMemo(() => {
     if (!hoveredDate || !participantNames.length) return [];
     const availableIndices = new Set(
-      (participantDateMap[hoveredDate] || []).map(info => info.participantIndex)
+      (participantDateMap[hoveredDate] || []).map((info) => info.participantIndex)
     );
     return participantNames
       .map((name, idx) => ({ name, available: availableIndices.has(idx) }))
@@ -102,7 +101,7 @@ export function Calendar({
         id: format(monthStart, 'yyyy-MM'),
         monthName: format(monthStart, 'MMMM yyyy'),
         days: allDays,
-        paddingDays
+        paddingDays,
       });
     }
     return data;
@@ -118,7 +117,10 @@ export function Calendar({
 
     if (isFullOverlap) {
       return (
-        <div className="absolute inset-0 rounded-xl" style={{ backgroundColor: FULL_OVERLAP_COLOR, opacity }} />
+        <div
+          className="absolute inset-0 rounded-xl"
+          style={{ backgroundColor: FULL_OVERLAP_COLOR, opacity }}
+        />
       );
     }
 
@@ -126,7 +128,12 @@ export function Calendar({
       const info = participantInfos[0];
       const color = participantColors[info.participantIndex % participantColors.length];
       if (info.type === 'all_day') {
-        return <div className="absolute inset-0 rounded-xl" style={{ backgroundColor: color, opacity }} />;
+        return (
+          <div
+            className="absolute inset-0 rounded-xl"
+            style={{ backgroundColor: color, opacity }}
+          />
+        );
       }
       if (info.type === 'morning') {
         return (
@@ -170,13 +177,14 @@ export function Calendar({
     <div className="flex flex-col gap-12">
       {monthData.map((month) => (
         <div key={month.id} className="flex flex-col gap-4">
-          <h3 className="text-lg font-semibold text-foreground/80 pl-1">
-            {month.monthName}
-          </h3>
+          <h3 className="text-lg font-semibold text-foreground/80 pl-1">{month.monthName}</h3>
 
           <div className="grid grid-cols-7 gap-1 sm:gap-2">
-            {WEEKDAYS.map(day => (
-              <div key={`${month.id}-${day}`} className="text-center text-xs font-medium text-muted-foreground pb-2">
+            {WEEKDAYS.map((day) => (
+              <div
+                key={`${month.id}-${day}`}
+                className="text-center text-xs font-medium text-muted-foreground pb-2"
+              >
                 {day}
               </div>
             ))}
@@ -188,30 +196,35 @@ export function Calendar({
             {month.days.map((date) => {
               const dateStr = format(date, 'yyyy-MM-dd');
               const isPastDate = isBefore(date, today);
-              const isOutsideRange = (startDate && isBefore(date, startOfDay(startDate))) ||
-                                    (endDate && isAfter(date, startOfDay(endDate)));
+              const isOutsideRange =
+                (startDate && isBefore(date, startOfDay(startDate))) ||
+                (endDate && isAfter(date, startOfDay(endDate)));
               const selectedType = selectedAvailabilities.get(dateStr);
               const participantInfos = participantDateMap[dateStr] || [];
               const counts = availabilityMap[dateStr] || { all_day: 0, morning: 0, afternoon: 0 };
               const totalCount = counts.all_day + counts.morning + counts.afternoon;
 
-              let cellClasses = "aspect-square rounded-xl flex flex-col items-center justify-center text-sm sm:text-base transition-all duration-200 ease-out relative overflow-hidden bg-secondary";
+              let cellClasses =
+                'aspect-square rounded-xl flex flex-col items-center justify-center text-sm sm:text-base transition-all duration-200 ease-out relative overflow-hidden bg-secondary';
 
               if (readonly) {
-                cellClasses = cn(cellClasses, "cursor-default");
+                cellClasses = cn(cellClasses, 'cursor-default');
                 if ((isPastDate || isOutsideRange) && totalCount === 0) {
-                  cellClasses = cn(cellClasses, "opacity-30 bg-transparent text-muted-foreground");
+                  cellClasses = cn(cellClasses, 'opacity-30 bg-transparent text-muted-foreground');
                 } else if (totalParticipants > 0 && totalCount === totalParticipants) {
-                  cellClasses = cn(cellClasses, "font-bold text-white neon-day-full-overlap");
+                  cellClasses = cn(cellClasses, 'font-bold text-white neon-day-full-overlap');
                 }
               } else {
                 if (isPastDate || isOutsideRange) {
-                  cellClasses = cn(cellClasses, "opacity-30 cursor-not-allowed bg-transparent text-muted-foreground");
+                  cellClasses = cn(
+                    cellClasses,
+                    'opacity-30 cursor-not-allowed bg-transparent text-muted-foreground'
+                  );
                 } else {
                   cellClasses = cn(
                     cellClasses,
-                    "cursor-pointer hover:bg-secondary/80 hover:scale-[0.98]",
-                    selectedType && "scale-95 neon-day-selected"
+                    'cursor-pointer hover:bg-secondary/80 hover:scale-[0.98]',
+                    selectedType && 'scale-95 neon-day-selected'
                   );
                 }
               }
@@ -220,21 +233,30 @@ export function Calendar({
                 <motion.button
                   key={dateStr}
                   data-testid={`calendar-day-${dateStr}`}
-                  disabled={(!readonly && (isPastDate || isOutsideRange))}
+                  disabled={!readonly && (isPastDate || isOutsideRange)}
                   onClick={() => onToggleDate?.(dateStr)}
                   className={cellClasses}
                   whileTap={!readonly && !isPastDate ? { scale: 0.9 } : {}}
                   initial={false}
-                  onMouseEnter={readonly && participantNames.length > 0 && !isOutsideRange ? (e) => {
-                    setHoveredDate(dateStr);
-                    setTooltipAnchor(e.currentTarget.getBoundingClientRect());
-                  } : undefined}
+                  onMouseEnter={
+                    readonly && participantNames.length > 0 && !isOutsideRange
+                      ? (e) => {
+                          setHoveredDate(dateStr);
+                          setTooltipAnchor(e.currentTarget.getBoundingClientRect());
+                        }
+                      : undefined
+                  }
                   onMouseLeave={readonly ? () => setHoveredDate(null) : undefined}
                 >
                   {!readonly && selectedType && (
                     <div className="absolute inset-0 flex">
                       {(selectedType === 'all_day' || selectedType === 'morning') && (
-                        <div className={cn("h-full bg-primary/80", selectedType === 'all_day' ? "w-full" : "w-1/2")} />
+                        <div
+                          className={cn(
+                            'h-full bg-primary/80',
+                            selectedType === 'all_day' ? 'w-full' : 'w-1/2'
+                          )}
+                        />
                       )}
                       {selectedType === 'afternoon' && (
                         <>
@@ -247,12 +269,17 @@ export function Calendar({
 
                   {readonly && renderHeatmapCell(dateStr, participantInfos)}
 
-                  <span className={cn(
-                    "relative z-10",
-                    isToday(date) && !selectedType && !readonly && "font-bold underline underline-offset-4",
-                    selectedType && !readonly && "text-primary-foreground font-bold",
-                    readonly && totalCount > 0 && "font-semibold text-white drop-shadow-sm"
-                  )}>
+                  <span
+                    className={cn(
+                      'relative z-10',
+                      isToday(date) &&
+                        !selectedType &&
+                        !readonly &&
+                        'font-bold underline underline-offset-4',
+                      selectedType && !readonly && 'text-primary-foreground font-bold',
+                      readonly && totalCount > 0 && 'font-semibold text-white drop-shadow-sm'
+                    )}
+                  >
                     {format(date, 'd')}
                   </span>
 
@@ -283,13 +310,15 @@ export function Calendar({
           <div className="flex flex-col gap-1.5 min-w-[120px]">
             {tooltipParticipants.map(({ name, available }) => (
               <div key={name} className="flex items-center gap-2 text-sm whitespace-nowrap">
-                <div className={cn(
-                  "w-2 h-2 rounded-full shrink-0",
-                  available
-                    ? "bg-green-400 shadow-[0_0_6px_rgba(34,197,94,0.9)]"
-                    : "bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)]"
-                )} />
-                <span className={available ? "text-foreground" : "text-muted-foreground/60"}>
+                <div
+                  className={cn(
+                    'w-2 h-2 rounded-full shrink-0',
+                    available
+                      ? 'bg-green-400 shadow-[0_0_6px_rgba(34,197,94,0.9)]'
+                      : 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)]'
+                  )}
+                />
+                <span className={available ? 'text-foreground' : 'text-muted-foreground/60'}>
                   {name}
                 </span>
               </div>
