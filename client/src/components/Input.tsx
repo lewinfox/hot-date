@@ -1,5 +1,5 @@
 import React from 'react';
-import { cn } from './Calendar'; // Reusing the utility
+import { cn } from '@/lib/utils';
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;

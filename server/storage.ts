@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { events, participants, availabilities } from "@shared/schema";
-import type { InsertEvent, Event, Participant, Availability, EventResponse, ParticipantWithAvailabilities, CreateParticipantRequest } from "@shared/schema";
+import type { InsertEvent, Event, Participant, Availability, EventResponse, ParticipantWithAvailabilities, CreateParticipantRequest, AvailabilityType } from "@shared/schema";
 import { eq, inArray, and, lt } from "drizzle-orm";
 import crypto from "crypto";
 

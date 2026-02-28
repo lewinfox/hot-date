@@ -1,11 +1,12 @@
 import React from 'react';
 import { motion, HTMLMotionProps } from 'framer-motion';
-import { cn } from './Calendar';
+import { cn } from '@/lib/utils';
 
 interface ButtonProps extends HTMLMotionProps<"button"> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
+  children?: React.ReactNode;
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(

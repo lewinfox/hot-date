@@ -14,13 +14,7 @@ import {
   startOfDay,
 } from 'date-fns';
 import { motion } from 'framer-motion';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
-
+import { cn } from '@/lib/utils';
 import { AvailabilityType } from '@shared/schema';
 
 export interface ParticipantDateInfo {
