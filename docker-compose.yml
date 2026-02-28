@@ -1,0 +1,12 @@
+services:
+  app:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - db_data:/data
+    environment:
+      DATABASE_PATH: /data/hot-date.db
+
+volumes:
+  db_data:

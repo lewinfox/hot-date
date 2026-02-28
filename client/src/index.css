@@ -1,0 +1,162 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-sans: 'Plus Jakarta Sans', sans-serif;
+    --font-display: 'Plus Jakarta Sans', sans-serif;
+
+    /* Dark neon theme — matched to the Hot Date logo palette */
+    --background: 240 30% 5%;
+    --foreground: 0 0% 95%;
+
+    --card: 240 25% 8%;
+    --card-foreground: 0 0% 95%;
+
+    --popover: 240 25% 8%;
+    --popover-foreground: 0 0% 95%;
+
+    /* Near-white primary so buttons are visible on dark */
+    --primary: 0 0% 93%;
+    --primary-foreground: 240 30% 5%;
+
+    --secondary: 240 20% 13%;
+    --secondary-foreground: 0 0% 85%;
+
+    --muted: 240 20% 13%;
+    --muted-foreground: 240 5% 55%;
+
+    /* Blue accent kept from original */
+    --accent: 221 83% 53%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 20% 16%;
+    --input: 240 20% 16%;
+    --ring: 221 83% 53%;
+
+    --radius: 1rem;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-sans);
+    /* Subtle refined noise texture for premium feel */
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.015'/%3E%3C/svg%3E");
+    background-attachment: fixed;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    @apply tracking-tight;
+  }
+}
+
+@layer utilities {
+  /* Soft shadow tuned for dark backgrounds */
+  .shadow-soft {
+    box-shadow: 0 4px 40px -2px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255,255,255,0.04);
+  }
+
+  .shadow-soft-hover {
+    box-shadow: 0 8px 50px -4px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255,255,255,0.06);
+  }
+
+  /* ── 80s Neon glow ── */
+  .neon-input {
+    -webkit-appearance: none;
+    appearance: none;
+    border-radius: 0.75rem;
+    border-color: rgba(0, 229, 255, 0.25);
+    background-color: rgba(255, 255, 255, 0.06);
+  }
+  .neon-input:focus {
+    outline: none;
+    border-color: #00e5ff;
+    background-color: rgba(0, 229, 255, 0.06);
+    box-shadow:
+      0 0 0 1px rgba(0, 229, 255, 0.35),
+      0 0 18px rgba(0, 229, 255, 0.4),
+      0 0 40px rgba(0, 229, 255, 0.15);
+  }
+
+  .neon-card {
+    border-color: rgba(0, 229, 255, 0.25) !important;
+    box-shadow:
+      0 0 0 1px rgba(0, 229, 255, 0.08),
+      0 0 60px rgba(0, 229, 255, 0.1),
+      0 0 120px rgba(180, 0, 255, 0.08),
+      0 4px 40px -2px rgba(0, 0, 0, 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .neon-label {
+    color: rgba(103, 232, 249, 0.85);
+    text-shadow: 0 0 10px rgba(0, 229, 255, 0.45);
+  }
+
+  @keyframes neon-btn-pulse {
+    0%, 100% {
+      box-shadow:
+        0 0 18px rgba(255, 0, 144, 0.6),
+        0 0 40px rgba(255, 0, 144, 0.3),
+        0 0 70px rgba(124, 58, 237, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    }
+    50% {
+      box-shadow:
+        0 0 32px rgba(255, 0, 144, 0.9),
+        0 0 70px rgba(255, 0, 144, 0.5),
+        0 0 110px rgba(61, 90, 254, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    }
+  }
+
+  .neon-btn {
+    background: linear-gradient(135deg, #ff0090 0%, #9c27b0 55%, #3d5afe 100%);
+    color: white;
+    text-shadow: 0 0 12px rgba(255, 255, 255, 0.6);
+    animation: neon-btn-pulse 2.5s ease-in-out infinite;
+  }
+  .neon-btn:disabled {
+    animation: none;
+    box-shadow: none;
+    opacity: 0.45;
+  }
+
+  .neon-day-selected {
+    box-shadow:
+      0 0 0 1px rgba(0, 229, 255, 0.5),
+      0 0 12px rgba(0, 229, 255, 0.45),
+      0 0 28px rgba(0, 229, 255, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+
+  .neon-day-full-overlap {
+    box-shadow:
+      0 0 0 1px rgba(34, 197, 94, 0.6),
+      0 0 14px rgba(34, 197, 94, 0.6),
+      0 0 32px rgba(34, 197, 94, 0.35),
+      0 0 60px rgba(34, 197, 94, 0.15);
+  }
+
+  /* Custom scrollbar for minimal look */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/20 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/40;
+  }
+}

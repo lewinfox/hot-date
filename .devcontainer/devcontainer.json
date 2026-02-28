@@ -1,0 +1,43 @@
+{
+  "name": "Hot Date",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspace",
+  // Install deps and push the DB schema once after the container is created.
+  // Run `npm run dev` in the integrated terminal to start the dev server.
+  "postCreateCommand": "npm install && npm run db:push",
+  "updateRemoteUserUID": true,
+  "mounts": [
+    "source=${localEnv:HOME}/.claude,target=/home/node/.claude,type=bind",
+    "source=${localEnv:HOME}/.claude.json,target=/home/node/.claude.json,type=bind"
+  ],
+  "forwardPorts": [
+    5000,
+    5432
+  ],
+  "portsAttributes": {
+    "5000": {
+      "label": "App (Express + Vite HMR)",
+      "onAutoForward": "openBrowser"
+    },
+    "5432": {
+      "label": "PostgreSQL",
+      "onAutoForward": "silent"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "ms-azuretools.vscode-docker",
+        "anthropic.claude-code",
+        "ms-vscode.vscode-typescript-next"
+      ],
+      "settings": {
+        "typescript.tsdk": "node_modules/typescript/lib"
+      }
+    }
+  }
+}
