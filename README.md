@@ -73,13 +73,52 @@ The app is available at [http://localhost:5000](http://localhost:5000). The SQLi
 
 ## Deployment
 
-### Docker
+### Docker (prebuilt image)
+
+The quickest way to self-host is to pull the prebuilt image from the GitHub Container Registry:
+
+```bash
+docker run -d \
+  --name hot-date \
+  -p 5000:5000 \
+  -v hot-date-data:/data \
+  -e DATABASE_PATH=/data/hot-date.db \
+  ghcr.io/lewinfox/hot-date:latest
+```
+
+The app will be available at [http://localhost:5000](http://localhost:5000).
+
+To keep the container running across reboots, add `--restart unless-stopped`.
+
+#### Using Docker Compose
+
+Save the following as `docker-compose.yml` and run `docker compose up -d`:
+
+```yaml
+services:
+  app:
+    image: ghcr.io/lewinfox/hot-date:latest
+    ports:
+      - "5000:5000"
+    volumes:
+      - db_data:/data
+    environment:
+      DATABASE_PATH: /data/hot-date.db
+    restart: unless-stopped
+
+volumes:
+  db_data:
+```
+
+#### Persistent data
+
+The SQLite database is stored in the `/data` directory inside the container. Mount a volume there (as shown above) to keep your data when the container is updated or recreated.
+
+### Building from source
 
 ```bash
 docker compose up --build
 ```
-
-The app runs on port 5000. The database is persisted in a Docker volume mounted at `/data`.
 
 ## Changing the Database Schema
 
@@ -103,6 +142,7 @@ On next startup (dev or production), `migrate()` will automatically apply the ne
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `DATABASE_PATH` | `./data/hot-date.db` | Path to the SQLite database file |
+| `EVENT_CLEANUP_DAYS` | `30` | Delete events this many days after their end date (set to `0` to disable) |
 | `NODE_ENV` | — | Set to `development` or `production` |
 | `PORT` | `5000` | Port the server listens on |
 

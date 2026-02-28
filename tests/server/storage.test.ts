@@ -227,3 +227,81 @@ describe('DatabaseStorage.updateEventDates', () => {
     expect(updated!.slug).toBe(event.slug);
   });
 });
+
+describe('DatabaseStorage.cleanupExpiredEvents', () => {
+  // Helper: date string N days relative to today
+  const relativeDate = (offsetDays: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() + offsetDays);
+    return d.toISOString().slice(0, 10);
+  };
+
+  it('returns 0 when there are no events', async () => {
+    expect(await storage.cleanupExpiredEvents(30)).toBe(0);
+  });
+
+  it('returns 0 when no events are past the grace period', async () => {
+    await storage.createEvent({ title: 'Future', startDate: relativeDate(-10), endDate: relativeDate(30) });
+    await storage.createEvent({ title: 'Ending Soon', startDate: relativeDate(-5), endDate: relativeDate(1) });
+
+    expect(await storage.cleanupExpiredEvents(30)).toBe(0);
+  });
+
+  it('deletes an expired event and returns the count', async () => {
+    await storage.createEvent({ title: 'Old Event', startDate: '2020-01-01', endDate: '2020-06-01' });
+
+    expect(await storage.cleanupExpiredEvents(30)).toBe(1);
+  });
+
+  it('does not delete an event that ended exactly graceDays ago', async () => {
+    await storage.createEvent({ title: 'Boundary', startDate: relativeDate(-40), endDate: relativeDate(-30) });
+
+    expect(await storage.cleanupExpiredEvents(30)).toBe(0);
+  });
+
+  it('deletes an event that ended one day past the grace period', async () => {
+    await storage.createEvent({ title: 'Just Expired', startDate: relativeDate(-40), endDate: relativeDate(-31) });
+
+    expect(await storage.cleanupExpiredEvents(30)).toBe(1);
+  });
+
+  it('cascades to delete participants and availabilities', async () => {
+    const event = await storage.createEvent({ title: 'Old With Data', startDate: '2020-01-01', endDate: '2020-06-01' });
+    await storage.addOrUpdateParticipant(event.slug, {
+      name: 'Alice',
+      availabilities: [{ date: '2020-03-01', type: 'all_day' }],
+    });
+
+    await storage.cleanupExpiredEvents(30);
+
+    // Event should be gone
+    expect(await storage.getEventBySlug(event.slug)).toBeUndefined();
+
+    // Participants and availabilities should also be gone
+    const { db } = await import('../../server/db');
+    const { participants, availabilities } = await import('../../shared/schema');
+    const { eq } = await import('drizzle-orm');
+    const remainingParticipants = await db.select().from(participants).where(eq(participants.eventId, event.id));
+    const remainingAvailabilities = await db.select().from(availabilities).where(eq(availabilities.eventId, event.id));
+    expect(remainingParticipants).toHaveLength(0);
+    expect(remainingAvailabilities).toHaveLength(0);
+  });
+
+  it('only deletes expired events, leaving current ones intact', async () => {
+    await storage.createEvent({ title: 'Old', startDate: '2020-01-01', endDate: '2020-06-01' });
+    const current = await storage.createEvent({ title: 'Current', startDate: relativeDate(-5), endDate: relativeDate(30) });
+
+    const deleted = await storage.cleanupExpiredEvents(30);
+
+    expect(deleted).toBe(1);
+    expect(await storage.getEventBySlug(current.slug)).toBeDefined();
+  });
+
+  it('deletes multiple expired events in one pass', async () => {
+    await storage.createEvent({ title: 'Old 1', startDate: '2020-01-01', endDate: '2020-03-01' });
+    await storage.createEvent({ title: 'Old 2', startDate: '2021-01-01', endDate: '2021-06-01' });
+    await storage.createEvent({ title: 'Old 3', startDate: '2022-01-01', endDate: '2022-12-31' });
+
+    expect(await storage.cleanupExpiredEvents(30)).toBe(3);
+  });
+});

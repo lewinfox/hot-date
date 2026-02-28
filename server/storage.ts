@@ -1,7 +1,7 @@
 import { db } from "./db";
 import { events, participants, availabilities } from "@shared/schema";
 import type { InsertEvent, Event, Participant, Availability, EventResponse, ParticipantWithAvailabilities, CreateParticipantRequest } from "@shared/schema";
-import { eq, inArray, and } from "drizzle-orm";
+import { eq, inArray, and, lt } from "drizzle-orm";
 import crypto from "crypto";
 
 export interface IStorage {
@@ -9,6 +9,7 @@ export interface IStorage {
   getEventBySlug(slug: string): Promise<EventResponse | undefined>;
   updateEventDates(slug: string, startDate?: string, endDate?: string): Promise<Event | undefined>;
   addOrUpdateParticipant(slug: string, req: CreateParticipantRequest): Promise<ParticipantWithAvailabilities>;
+  cleanupExpiredEvents(graceDays: number): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -53,6 +54,32 @@ export class DatabaseStorage implements IStorage {
       .where(eq(events.slug, slug))
       .returning();
     return event;
+  }
+
+  async cleanupExpiredEvents(graceDays: number): Promise<number> {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - graceDays);
+    const cutoffStr = cutoff.toISOString().slice(0, 10);
+
+    const expired = await db.select({ id: events.id })
+      .from(events)
+      .where(lt(events.endDate, cutoffStr));
+
+    if (expired.length === 0) return 0;
+
+    const expiredIds = expired.map(e => e.id);
+    const expiredParticipants = await db.select({ id: participants.id })
+      .from(participants)
+      .where(inArray(participants.eventId, expiredIds));
+
+    if (expiredParticipants.length > 0) {
+      await db.delete(availabilities)
+        .where(inArray(availabilities.participantId, expiredParticipants.map(p => p.id)));
+      await db.delete(participants).where(inArray(participants.eventId, expiredIds));
+    }
+
+    await db.delete(events).where(inArray(events.id, expiredIds));
+    return expiredIds.length;
   }
 
   async addOrUpdateParticipant(slug: string, req: CreateParticipantRequest): Promise<ParticipantWithAvailabilities> {

@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { storage } from "./storage";
 
 const app = express();
 const httpServer = createServer(app);
@@ -84,6 +85,15 @@ app.use((req, res, next) => {
     const { setupVite } = await import("./vite");
     await setupVite(httpServer, app);
   }
+
+  // Periodically clean up events whose end date is more than EVENT_CLEANUP_DAYS in the past (default: 30)
+  const cleanupGraceDays = parseInt(process.env.EVENT_CLEANUP_DAYS || "30", 10);
+  const runCleanup = async () => {
+    const deleted = await storage.cleanupExpiredEvents(cleanupGraceDays);
+    if (deleted > 0) log(`Cleaned up ${deleted} expired event(s)`, "cleanup");
+  };
+  runCleanup();
+  setInterval(runCleanup, 24 * 60 * 60 * 1000);
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
   // Other ports are firewalled. Default to 5000 if not specified.
