@@ -1,3 +1,44 @@
+/**
+ * pages/Event.tsx — Event Detail Page
+ *
+ * This is the core page of the application. It is rendered when the user visits
+ * a URL like `/event/summer-cabin-trip-abc123`. The URL slug identifies which
+ * event to load from the server.
+ *
+ * The page has two main sections, displayed side-by-side on desktop and stacked
+ * on mobile:
+ *
+ *   Left — "Your Availability" (interactive editor)
+ *     The current user enters their name and clicks calendar cells to mark
+ *     which days they're free (all day, morning, or afternoon). Clicking Save
+ *     POSTs their selections to the server.
+ *
+ *   Right — "Group Availability" (read-only heatmap)
+ *     A colour-coded calendar showing the aggregate availability of all
+ *     participants. Cells are brighter/more vivid the more people are free on
+ *     that day. When every participant is free on the same day, a "Perfect
+ *     Match!" banner appears at the top.
+ *
+ * Key architectural decisions:
+ *
+ *   Optimistic local date state (`localStartDate`, `localEndDate`):
+ *     The event's date range can be edited by the organiser. We keep local
+ *     state that updates on every keystroke (so the calendar range updates
+ *     immediately) but only write to the server on `onBlur` (to avoid
+ *     hammering the API on every character). The heatmap uses these local values
+ *     too, so it stays in sync without a server round-trip.
+ *
+ *   useRef for refs that shouldn't cause re-renders:
+ *     `nameInputRef` (to focus/scroll the name input) and `hasAppliedUrlName`
+ *     (a one-time flag) use `useRef` because changes to them shouldn't cause
+ *     re-renders — they're imperative handles, not reactive state.
+ *
+ *   useMemo for expensive aggregation:
+ *     The heatmap data (aggregating all participant availabilities into maps)
+ *     is computed inside `useMemo` so it only runs when participants or the
+ *     date range change, not on every render.
+ */
+
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useRoute, useSearch, Link } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -14,20 +55,29 @@ import type { AvailabilityType } from '@shared/schema';
 export default function EventPage() {
   // useRoute gives us the slug from the URL path (/event/:slug).
   // We discard the first element (the match boolean) since we only need the params.
+  // `params?.slug` uses optional chaining — if params is null (no match), we
+  // fall back to an empty string rather than throwing a runtime error.
   const [, params] = useRoute('/event/:slug');
   const slug = params?.slug || '';
 
-  // useSearch returns the raw query string so we can extract ?name=... for
-  // deep-linking directly into a participant's edit session.
+  // useSearch returns the raw query string (e.g. "?name=Alice%20Smith") so we
+  // can extract the `?name=` parameter for deep-linking. When an organiser copies
+  // a participant's personal edit link, that link includes their name in the URL
+  // so the page pre-fills the name field without them having to type it.
   const searchString = useSearch();
   const queryParams = new URLSearchParams(searchString);
   const nameFromUrl = queryParams.get('name');
 
   // Fetch the event (including all participants and their availabilities) from
   // the server. React Query handles caching and background re-fetching.
+  // Destructuring `data: event` renames the `data` property to `event` for
+  // readability — `{ data: event }` means "take the `data` property and call it
+  // `event` in this scope".
   const { data: event, isLoading, error } = useEvent(slug);
 
   // Separate mutations so we can track their pending/error states independently.
+  // If we used a single mutation for both, we couldn't tell whether the spinner
+  // on the "Save" button was for saving availability or updating the date range.
   const updateAvailability = useUpdateAvailability(slug);
   const updateEvent = useUpdateEvent(slug);
   const { toast } = useToast();
@@ -266,6 +316,15 @@ export default function EventPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // ─── Early returns: loading and error states ──────────────────────────────
+  //
+  // React components must always return valid JSX (or null). When state affects
+  // which JSX to return, we use early returns: check the condition, return the
+  // appropriate UI, and let the rest of the function (the happy path) run only
+  // when everything is ready. TypeScript also benefits — after the `if (!event)`
+  // guard below, the type of `event` is narrowed from `EventResponse | null` to
+  // just `EventResponse`, so we don't need null checks below.
+
   // Show a skeleton pulse while the first fetch is in flight so the layout
   // doesn't shift when the data arrives.
   if (isLoading) {
@@ -344,6 +403,11 @@ export default function EventPage() {
             </div>
           </div>
 
+          {/**
+           * Copy Link button — the ternary `{copied ? ... : ...}` swaps both
+           * the icon and label between their normal and "confirmed" states.
+           * This gives instant visual feedback without a separate tooltip.
+           */}
           <Button
             variant="secondary"
             size="sm"
@@ -362,10 +426,18 @@ export default function EventPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* "Perfect Match!" banner — only shown when there are dates where
-            every participant is available AND there are at least two people
-            (a single-person "match" isn't meaningful). The banner slides in
-            from above via framer-motion to draw attention without being jarring. */}
+        {/**
+         * "Perfect Match!" banner.
+         *
+         * Only shown when ALL of these are true:
+         *   - There is at least one date where every participant is available.
+         *   - There are at least 2 participants (a solo "match" isn't meaningful).
+         *
+         * The banner slides in from above (`y: -10 → 0`) via framer-motion.
+         * `{' '}` in JSX is a space character — necessary because JSX collapses
+         * whitespace between elements, so "on{' '}these days" produces "on these days"
+         * rather than "onthese days".
+         */}
         {heatmapData.optimalDates.length > 0 && heatmapData.total > 1 && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -385,6 +457,12 @@ export default function EventPage() {
                 {heatmapData.optimalDates.length === 1 ? 'this day' : 'these days'}:
               </p>
               <div className="flex flex-wrap gap-2 mt-3">
+                {/**
+                 * `format(new Date(dateStr), 'EEEE, MMM d')` converts a date
+                 * string like "2025-07-15" to a human-readable label like
+                 * "Tuesday, Jul 15". EEEE = full weekday, MMM = 3-letter month,
+                 * d = day number (no leading zero).
+                 */}
                 {heatmapData.optimalDates.map((dateStr) => (
                   <span
                     key={dateStr}
@@ -648,8 +726,11 @@ export default function EventPage() {
           </section>
         </div>
 
-        {/* Footer trust signals — kept below the fold intentionally so they
-            don't compete with the primary interaction (picking dates). */}
+        {/**
+         * Footer trust signals — kept below the fold intentionally so they
+         * don't compete with the primary interaction (picking dates). Shown
+         * below the two-column section, outside and after both columns.
+         */}
         <div className="mt-24 max-w-2xl mx-auto border-t border-border/50 pt-8 pb-12">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
             <div className="flex items-start gap-3">
