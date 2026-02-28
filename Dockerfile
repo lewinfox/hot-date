@@ -15,11 +15,16 @@ RUN npm run build
 # Dev stage (used by devcontainer)
 FROM node:20-bookworm AS dev
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    vim \
+COPY package*.json /home/node/
+RUN cd /home/node && npm install
+
+RUN apt-get update && apt-get install -y --no-install-recommends vim \
+    && cd /home/node && npx playwright install-deps chromium \
     && rm -rf /var/lib/apt/lists/*
 
 USER node
+
+RUN cd /home/node && npx playwright install chromium
 
 WORKDIR /home/node
 
