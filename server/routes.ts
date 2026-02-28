@@ -38,6 +38,23 @@ export async function registerRoutes(
     }
   });
 
+  app.patch(api.events.update.path, async (req, res) => {
+    try {
+      const input = api.events.update.input.parse(req.body);
+      const event = await storage.updateEventDates(req.params.slug, input.startDate, input.endDate);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      res.json(event);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
+      } else {
+        res.status(500).json({ message: "Internal server error" });
+      }
+    }
+  });
+
   app.post(api.participants.createOrUpdate.path, async (req, res) => {
     try {
       const input = api.participants.createOrUpdate.input.parse(req.body);

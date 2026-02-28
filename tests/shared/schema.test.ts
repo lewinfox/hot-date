@@ -83,3 +83,36 @@ describe('api.participants.createOrUpdate.input', () => {
     expect(() => schema.parse({ availabilities: [] })).toThrow();
   });
 });
+
+describe('api.events.update.input', () => {
+  const schema = api.events.update.input;
+
+  it('accepts startDate only', () => {
+    const result = schema.parse({ startDate: '2025-08-01' });
+    expect(result.startDate).toBe('2025-08-01');
+    expect(result.endDate).toBeUndefined();
+  });
+
+  it('accepts endDate only', () => {
+    const result = schema.parse({ endDate: '2025-08-31' });
+    expect(result.endDate).toBe('2025-08-31');
+    expect(result.startDate).toBeUndefined();
+  });
+
+  it('accepts both startDate and endDate', () => {
+    const result = schema.parse({ startDate: '2025-08-01', endDate: '2025-08-31' });
+    expect(result.startDate).toBe('2025-08-01');
+    expect(result.endDate).toBe('2025-08-31');
+  });
+
+  it('accepts an empty object (both fields optional)', () => {
+    const result = schema.parse({});
+    expect(result.startDate).toBeUndefined();
+    expect(result.endDate).toBeUndefined();
+  });
+
+  it('strips unknown fields', () => {
+    const result = schema.parse({ startDate: '2025-08-01', extra: 'field' });
+    expect(result).not.toHaveProperty('extra');
+  });
+});

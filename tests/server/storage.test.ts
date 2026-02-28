@@ -168,3 +168,62 @@ describe('DatabaseStorage.addOrUpdateParticipant', () => {
     expect(fetched!.participants).toHaveLength(2);
   });
 });
+
+describe('DatabaseStorage.updateEventDates', () => {
+  it('returns undefined for a non-existent slug', async () => {
+    const result = await storage.updateEventDates('noevent', '2025-09-01', '2025-09-30');
+    expect(result).toBeUndefined();
+  });
+
+  it('updates startDate only', async () => {
+    const event = await storage.createEvent({ title: 'Date Test', startDate: '2025-06-01', endDate: '2025-06-30' });
+
+    const updated = await storage.updateEventDates(event.slug, '2025-07-01', undefined);
+
+    expect(updated!.startDate).toBe('2025-07-01');
+    expect(updated!.endDate).toBe('2025-06-30');
+  });
+
+  it('updates endDate only', async () => {
+    const event = await storage.createEvent({ title: 'Date Test', startDate: '2025-06-01', endDate: '2025-06-30' });
+
+    const updated = await storage.updateEventDates(event.slug, undefined, '2025-08-31');
+
+    expect(updated!.startDate).toBe('2025-06-01');
+    expect(updated!.endDate).toBe('2025-08-31');
+  });
+
+  it('updates both startDate and endDate', async () => {
+    const event = await storage.createEvent({ title: 'Date Test', startDate: '2025-06-01', endDate: '2025-06-30' });
+
+    const updated = await storage.updateEventDates(event.slug, '2025-09-01', '2025-09-30');
+
+    expect(updated!.startDate).toBe('2025-09-01');
+    expect(updated!.endDate).toBe('2025-09-30');
+  });
+
+  it('persists the change so getEventBySlug reflects the new dates', async () => {
+    const event = await storage.createEvent({ title: 'Persist Test', startDate: '2025-06-01', endDate: '2025-06-30' });
+
+    await storage.updateEventDates(event.slug, '2025-10-01', '2025-10-31');
+
+    const fetched = await storage.getEventBySlug(event.slug);
+    expect(fetched!.startDate).toBe('2025-10-01');
+    expect(fetched!.endDate).toBe('2025-10-31');
+  });
+
+  it('does not affect other event fields', async () => {
+    const event = await storage.createEvent({
+      title: 'Unchanged Fields',
+      description: 'Keep me',
+      startDate: '2025-06-01',
+      endDate: '2025-06-30',
+    });
+
+    const updated = await storage.updateEventDates(event.slug, '2025-07-01', '2025-07-31');
+
+    expect(updated!.title).toBe('Unchanged Fields');
+    expect(updated!.description).toBe('Keep me');
+    expect(updated!.slug).toBe(event.slug);
+  });
+});

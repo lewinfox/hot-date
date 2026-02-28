@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link2, Check, Users, Calendar as CalendarIcon, UserCheck } from 'lucide-react';
 import hotDateLogo from '@assets/logo.png';
 import { format } from 'date-fns';
-import { useEvent, useUpdateAvailability } from '@/hooks/use-events';
+import { useEvent, useUpdateAvailability, useUpdateEvent } from '@/hooks/use-events';
 import { Calendar, PARTICIPANT_COLORS, type ParticipantDateInfo } from '@/components/Calendar';
 import { Input } from '@/components/Input';
 import { Button } from '@/components/Button';
@@ -20,7 +20,11 @@ export default function EventPage() {
   
   const { data: event, isLoading, error } = useEvent(slug);
   const updateAvailability = useUpdateAvailability(slug);
+  const updateEvent = useUpdateEvent(slug);
   const { toast } = useToast();
+
+  const [localStartDate, setLocalStartDate] = useState('');
+  const [localEndDate, setLocalEndDate] = useState('');
   const nameInputRef = useRef<HTMLInputElement>(null);
   const hasAppliedUrlName = useRef(false);
 
@@ -34,6 +38,13 @@ export default function EventPage() {
       setName(nameFromUrl);
     }
   }, [nameFromUrl]);
+
+  useEffect(() => {
+    if (event) {
+      setLocalStartDate(event.startDate ?? '');
+      setLocalEndDate(event.endDate ?? '');
+    }
+  }, [event?.startDate, event?.endDate]);
 
   useEffect(() => {
     if (event?.participants && name.trim()) {
@@ -177,10 +188,36 @@ export default function EventPage() {
               <img src={hotDateLogo} alt="Hot Date" className="w-16 h-auto shrink-0" />
             </Link>
             <div>
-            <h1 className="text-2xl font-bold text-foreground">{event.title}</h1>
-            {event.description && (
-              <p className="text-sm text-muted-foreground mt-1">{event.description}</p>
-            )}
+              <h1 className="text-2xl font-bold text-foreground">{event.title}</h1>
+              {event.description && (
+                <p className="text-sm text-muted-foreground mt-0.5">{event.description}</p>
+              )}
+              <div className="flex items-center gap-2 mt-1.5">
+                <CalendarIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                <input
+                  type="date"
+                  value={localStartDate}
+                  onChange={(e) => setLocalStartDate(e.target.value)}
+                  onBlur={(e) => {
+                    if (e.target.value && e.target.value !== event.startDate) {
+                      updateEvent.mutate({ startDate: e.target.value });
+                    }
+                  }}
+                  className="text-sm bg-transparent border-b border-border/50 hover:border-primary focus:border-primary focus:outline-none text-foreground cursor-pointer transition-colors"
+                />
+                <span className="text-muted-foreground text-sm">→</span>
+                <input
+                  type="date"
+                  value={localEndDate}
+                  onChange={(e) => setLocalEndDate(e.target.value)}
+                  onBlur={(e) => {
+                    if (e.target.value && e.target.value !== event.endDate) {
+                      updateEvent.mutate({ endDate: e.target.value });
+                    }
+                  }}
+                  className="text-sm bg-transparent border-b border-border/50 hover:border-primary focus:border-primary focus:outline-none text-foreground cursor-pointer transition-colors"
+                />
+              </div>
             </div>
           </div>
           

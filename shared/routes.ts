@@ -33,6 +33,18 @@ export const api = {
         404: errorSchemas.notFound,
       },
     },
+    update: {
+      method: 'PATCH' as const,
+      path: '/api/events/:slug' as const,
+      input: z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }),
+      responses: {
+        200: z.custom<typeof events.$inferSelect>(),
+        404: errorSchemas.notFound,
+      },
+    },
   },
   participants: {
     createOrUpdate: {

@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
-import { 
-  startOfMonth, 
-  endOfMonth, 
-  eachDayOfInterval, 
-  format, 
-  addMonths, 
+import {
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  format,
+  addMonths,
   isToday,
   isBefore,
   isAfter,
@@ -62,10 +62,10 @@ const FULL_OVERLAP_COLOR = '#22c55e';
 
 export { PARTICIPANT_COLORS };
 
-export function Calendar({ 
+export function Calendar({
   startDate = new Date(),
   endDate,
-  selectedAvailabilities = new Map(), 
+  selectedAvailabilities = new Map(),
   onToggleDate,
   readonly = false,
   availabilityMap = {},
@@ -88,7 +88,7 @@ export function Calendar({
       .map((name, idx) => ({ name, available: availableIndices.has(idx) }))
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [hoveredDate, participantNames, participantDateMap]);
-  
+
   const monthData = useMemo(() => {
     const data = [];
     const start = startOfDay(startDate);
@@ -99,11 +99,11 @@ export function Calendar({
       const monthStart = startOfMonth(addMonths(start, i));
       const monthEnd = endOfMonth(monthStart);
       const allDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
-      
+
       const day = getDay(monthStart);
       const startDayOfWeek = day === 0 ? 6 : day - 1;
       const paddingDays = Array(startDayOfWeek).fill(null);
-      
+
       data.push({
         id: format(monthStart, 'yyyy-MM'),
         monthName: format(monthStart, 'MMMM yyyy'),
@@ -179,28 +179,28 @@ export function Calendar({
           <h3 className="text-lg font-semibold text-foreground/80 pl-1">
             {month.monthName}
           </h3>
-          
+
           <div className="grid grid-cols-7 gap-1 sm:gap-2">
             {WEEKDAYS.map(day => (
               <div key={`${month.id}-${day}`} className="text-center text-xs font-medium text-muted-foreground pb-2">
                 {day}
               </div>
             ))}
-            
+
             {month.paddingDays.map((_, i) => (
               <div key={`${month.id}-pad-${i}`} className="aspect-square" />
             ))}
-            
+
             {month.days.map((date) => {
               const dateStr = format(date, 'yyyy-MM-dd');
               const isPastDate = isBefore(date, today);
-              const isOutsideRange = (startDate && isBefore(date, startOfDay(startDate))) || 
+              const isOutsideRange = (startDate && isBefore(date, startOfDay(startDate))) ||
                                     (endDate && isAfter(date, startOfDay(endDate)));
               const selectedType = selectedAvailabilities.get(dateStr);
               const participantInfos = participantDateMap[dateStr] || [];
               const counts = availabilityMap[dateStr] || { all_day: 0, morning: 0, afternoon: 0 };
               const totalCount = counts.all_day + counts.morning + counts.afternoon;
-              
+
               let cellClasses = "aspect-square rounded-xl flex flex-col items-center justify-center text-sm sm:text-base transition-all duration-200 ease-out relative overflow-hidden bg-secondary";
 
               if (readonly) {
@@ -261,7 +261,7 @@ export function Calendar({
                   )}>
                     {format(date, 'd')}
                   </span>
-                  
+
                   {readonly && totalCount > 0 && (
                     <span className="relative z-10 text-[0.55rem] font-bold text-white/90 drop-shadow-sm">
                       {totalCount}/{totalParticipants}

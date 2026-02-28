@@ -7,6 +7,7 @@ import crypto from "crypto";
 export interface IStorage {
   createEvent(event: InsertEvent): Promise<Event>;
   getEventBySlug(slug: string): Promise<EventResponse | undefined>;
+  updateEventDates(slug: string, startDate?: string, endDate?: string): Promise<Event | undefined>;
   addOrUpdateParticipant(slug: string, req: CreateParticipantRequest): Promise<ParticipantWithAvailabilities>;
 }
 
@@ -40,6 +41,18 @@ export class DatabaseStorage implements IStorage {
     }));
 
     return { ...event, participants: participantsWithDates };
+  }
+
+  async updateEventDates(slug: string, startDate?: string, endDate?: string): Promise<Event | undefined> {
+    const updates: Partial<typeof events.$inferInsert> = {};
+    if (startDate !== undefined) updates.startDate = startDate;
+    if (endDate !== undefined) updates.endDate = endDate;
+
+    const [event] = await db.update(events)
+      .set(updates)
+      .where(eq(events.slug, slug))
+      .returning();
+    return event;
   }
 
   async addOrUpdateParticipant(slug: string, req: CreateParticipantRequest): Promise<ParticipantWithAvailabilities> {

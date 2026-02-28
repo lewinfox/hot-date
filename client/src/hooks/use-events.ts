@@ -44,6 +44,32 @@ export function useEvent(slug: string) {
   });
 }
 
+export function useUpdateEvent(slug: string) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (data: { startDate?: string; endDate?: string }) => {
+      const res = await fetch(buildUrl(api.events.update.path, { slug }), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to update event");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.events.get.path, slug] });
+    },
+    onError: (error) => {
+      toast({ title: "Error updating dates", description: error.message, variant: "destructive" });
+    },
+  });
+}
+
 export function useUpdateAvailability(slug: string) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
