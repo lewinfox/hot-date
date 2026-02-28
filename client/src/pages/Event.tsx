@@ -125,8 +125,14 @@ export default function EventPage() {
 
     // Dates are stored as YYYY-MM-DD strings, so lexicographic comparison is
     // equivalent to chronological comparison — no Date parsing needed.
-    const rangeStart = event.startDate;
-    const rangeEnd = event.endDate;
+    //
+    // Use localStartDate/localEndDate (not event.startDate/event.endDate) so
+    // the filter reacts immediately when the organiser changes the date inputs,
+    // rather than waiting for the server round-trip to complete. localStartDate
+    // is always initialised from the server value on load, so it's safe to rely
+    // on here.
+    const rangeStart = localStartDate;
+    const rangeEnd = localEndDate;
 
     event.participants.forEach((p, participantIndex) => {
       p.availabilities.forEach((a) => {
@@ -179,10 +185,10 @@ export default function EventPage() {
       optimalDates,
       participantDateMap,
     };
-    // We depend on startDate/endDate as well as participants so that narrowing
-    // the event range immediately re-filters the heatmap without waiting for a
-    // participant change to trigger a recompute.
-  }, [event?.participants, event?.startDate, event?.endDate]);
+    // localStartDate/localEndDate are included (not the server event dates) so
+    // the heatmap re-filters as soon as the organiser edits the date inputs,
+    // keeping the "Perfect Match!" banner in sync with the visible calendar range.
+  }, [event?.participants, localStartDate, localEndDate]);
 
   // Cycles a date through the four availability states: unset → all_day →
   // morning → afternoon → unset. We copy the Map first because React state must
@@ -458,13 +464,13 @@ export default function EventPage() {
               </div>
             </div>
 
-            {/* Interactive calendar — passes server dates (not local state) so
-                the visible range matches what's actually saved. selectedAvailabilities
-                drives the cell highlighting; onToggleDate cycles the state. */}
+            {/* Interactive calendar — uses localStartDate/localEndDate so the
+                visible range updates immediately when the organiser changes the
+                date inputs, consistent with the heatmap and banner behaviour. */}
             <div className="bg-card p-4 sm:p-8 rounded-[2rem] shadow-soft border border-border/50">
               <Calendar
-                startDate={event.startDate ? new Date(event.startDate) : undefined}
-                endDate={event.endDate ? new Date(event.endDate) : undefined}
+                startDate={localStartDate ? new Date(localStartDate) : undefined}
+                endDate={localEndDate ? new Date(localEndDate) : undefined}
                 selectedAvailabilities={selectedAvailabilities}
                 onToggleDate={handleToggleDate}
               />
@@ -523,8 +529,8 @@ export default function EventPage() {
                       render per-person colour chips in the day tooltip. */}
                   <Calendar
                     readonly
-                    startDate={event.startDate ? new Date(event.startDate) : undefined}
-                    endDate={event.endDate ? new Date(event.endDate) : undefined}
+                    startDate={localStartDate ? new Date(localStartDate) : undefined}
+                    endDate={localEndDate ? new Date(localEndDate) : undefined}
                     availabilityMap={heatmapData.map}
                     totalParticipants={heatmapData.total}
                     participantDateMap={heatmapData.participantDateMap}
