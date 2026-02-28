@@ -53,7 +53,7 @@
  */
 
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
-import { createInsertSchema } from 'drizzle-zod';
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
 
 /**
@@ -221,36 +221,42 @@ export const availabilityTypeSchema = z.enum(['all_day', 'morning', 'afternoon']
 export type AvailabilityType = z.infer<typeof availabilityTypeSchema>;
 
 /**
- * ParticipantWithAvailabilities — A participant row with their availabilities nested.
+ * participantWithAvailabilitiesSchema — Zod schema for a participant row with
+ * their availabilities nested.
  *
- * The `&` ("intersection type") operator combines two types into one. The result
- * has all the fields of `Participant` PLUS the `availabilities` array.
+ * `createSelectSchema(participants)` auto-generates a Zod schema from the
+ * Drizzle table definition — all columns become typed Zod fields. We then
+ * call `.extend({ availabilities: ... })` to add the nested array that doesn't
+ * exist as a column (it's assembled in storage.ts from a separate query).
  *
- * The `availabilities` array contains only `{ date, type }` — not the full
- * `Availability` row (which also has `id`, `eventId`, `participantId`). This
- * reduces the response payload and avoids exposing internal IDs to the client.
+ * The `availabilities` items reuse `availabilityTypeSchema` for the `type`
+ * field, keeping the enum values in one place.
  *
- * This type is used by `storage.getEventBySlug` (return value of `.map()`) and
- * by `storage.addOrUpdateParticipant` (return value).
+ * This schema is used in routes.ts as the response schema for the
+ * `participants.createOrUpdate` endpoint, replacing the previous `z.any()`.
  */
-export type ParticipantWithAvailabilities = Participant & {
-  availabilities: { date: string; type: AvailabilityType }[];
-};
+export const participantWithAvailabilitiesSchema = createSelectSchema(participants).extend({
+  availabilities: z.array(z.object({ date: z.string(), type: availabilityTypeSchema })),
+});
+
+/** Derived TypeScript type — always in sync with the Zod schema above. */
+export type ParticipantWithAvailabilities = z.infer<typeof participantWithAvailabilitiesSchema>;
 
 /**
- * EventResponse — The full API response shape for GET /api/events/:slug.
+ * eventResponseSchema — Zod schema for the full event API response.
  *
- * Extends the `Event` row with a `participants` array, each of which carries
- * their nested availabilities. This is the nested structure that `storage.
- * getEventBySlug` builds from three flat database queries and returns to the
- * client.
+ * `createSelectSchema(events)` gives us the event row fields, then `.extend()`
+ * adds the `participants` array (each participant carrying their availabilities),
+ * mirroring the nested structure assembled by `storage.getEventBySlug`.
  *
- * The client (use-events.ts) stores this entire object in the React Query cache
- * and passes it down through props to the Calendar and other components.
+ * Used in routes.ts as the response schema for the `events.get` endpoint.
  */
-export type EventResponse = Event & {
-  participants: ParticipantWithAvailabilities[];
-};
+export const eventResponseSchema = createSelectSchema(events).extend({
+  participants: z.array(participantWithAvailabilitiesSchema),
+});
+
+/** Derived TypeScript type — always in sync with the Zod schema above. */
+export type EventResponse = z.infer<typeof eventResponseSchema>;
 
 /**
  * CreateParticipantRequest — The expected request body for POST

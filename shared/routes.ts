@@ -36,7 +36,13 @@
  */
 
 import { z } from 'zod';
-import { insertEventSchema, events, availabilityTypeSchema } from './schema';
+import {
+  insertEventSchema,
+  events,
+  availabilityTypeSchema,
+  participantWithAvailabilitiesSchema,
+  eventResponseSchema,
+} from './schema';
 
 /**
  * errorSchemas — Reusable Zod schemas for standard error response shapes.
@@ -123,17 +129,15 @@ export const api = {
      * No `input` field because GET requests don't have a body — the only
      * parameter is the `:slug` in the URL path.
      *
-     * `z.any()` is used for the 200 response because the `EventResponse` type
-     * (event + nested participants + nested availabilities) is complex and the
-     * full Zod schema would be verbose. A comment notes the intended type.
-     * The client trusts the server to return the correct shape and uses the
-     * `EventResponse` TypeScript type from schema.ts directly.
+     * The 200 response uses `eventResponseSchema` from schema.ts, which is built
+     * via `createSelectSchema(events).extend({ participants: ... })`. This gives
+     * full runtime validation of the response shape rather than the weaker `z.any()`.
      */
     get: {
       method: 'GET' as const,
       path: '/api/events/:slug' as const,
       responses: {
-        200: z.any(), // EventResponse
+        200: eventResponseSchema,
         404: errorSchemas.notFound,
       },
     },
@@ -195,7 +199,7 @@ export const api = {
         ),
       }),
       responses: {
-        200: z.any(), // ParticipantWithAvailabilities
+        200: participantWithAvailabilitiesSchema,
         400: errorSchemas.validation,
         404: errorSchemas.notFound,
       },
