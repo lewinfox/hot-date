@@ -550,8 +550,8 @@ export default function EventPage() {
             {/* The name + save controls are sticky so they remain accessible
                 while the user scrolls through a multi-month calendar below.
                 top-24 offsets below the sticky header (which is ~96 px tall). */}
-            <div className="sticky top-24 z-10 pt-2 pb-4">
-              <div className="flex flex-col gap-3 bg-card/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4 neon-card">
+            <div className="sticky top-24 z-30 pt-2 pb-4 pointer-events-none">
+              <div className="flex flex-col gap-3 bg-secondary backdrop-blur-xl border border-white/10 rounded-2xl p-4 neon-card pointer-events-auto">
                 <h2 className="text-2xl font-bold neon-label">Your Name</h2>
                 <div className="flex items-center gap-4">
                   <Input
@@ -559,19 +559,21 @@ export default function EventPage() {
                     placeholder="e.g. Jane Doe"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
+                    className="!bg-secondary"
                     data-testid="input-name"
                   />
-                  <Button
-                    onClick={handleSave}
-                    // Disable while a name hasn't been entered or while the
-                    // previous save is still in-flight to prevent double-submits.
-                    disabled={!name.trim() || updateAvailability.isPending}
-                    isLoading={updateAvailability.isPending}
-                    className="shrink-0"
-                    data-testid="button-save"
-                  >
-                    Save
-                  </Button>
+                  <div className="shrink-0">
+                    <Button
+                      onClick={handleSave}
+                      // Disable while a name hasn't been entered or while the
+                      // previous save is still in-flight to prevent double-submits.
+                      disabled={!name.trim() || updateAvailability.isPending}
+                      isLoading={updateAvailability.isPending}
+                      data-testid="button-save"
+                    >
+                      Save
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>

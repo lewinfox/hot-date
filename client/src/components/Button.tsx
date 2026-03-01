@@ -93,7 +93,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           // `inline-flex items-center justify-center` aligns icon + text centrally.
           // `disabled:transform-none` prevents the hover lift animation from
           // appearing on a disabled button, since that would be misleading.
-          'inline-flex items-center justify-center rounded-xl font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none',
+          'inline-flex items-center justify-center rounded-xl font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:transform-none',
           variants[variant],
           sizes[size],
           // `className` from props is applied last so callers can override

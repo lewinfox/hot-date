@@ -140,7 +140,7 @@
   .neon-btn:disabled {
     animation: none;
     box-shadow: none;
-    opacity: 0.45;
+    filter: saturate(0.3) brightness(0.55);
   }
 
   .neon-day-selected {
