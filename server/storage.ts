@@ -36,7 +36,7 @@ import type {
   CreateParticipantRequest,
   AvailabilityType,
 } from '@shared/schema';
-import { eq, inArray, and, lt } from 'drizzle-orm';
+import { eq, inArray, and, lt, desc } from 'drizzle-orm';
 import crypto from 'crypto';
 
 /**
@@ -53,7 +53,10 @@ import crypto from 'crypto';
 export interface IStorage {
   createEvent(event: InsertEvent): Promise<Event>;
   getEventBySlug(slug: string): Promise<EventResponse | undefined>;
-  updateEventDates(slug: string, startDate?: string, endDate?: string): Promise<Event | undefined>;
+  updateEvent(
+    slug: string,
+    updates: { title?: string; description?: string | null; startDate?: string; endDate?: string }
+  ): Promise<Event | undefined>;
   addOrUpdateParticipant(
     slug: string,
     req: CreateParticipantRequest
@@ -147,7 +150,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   /**
-   * updateEventDates — Patch an event's startDate and/or endDate.
+   * Patch an event's startDate, endDate or description.
    *
    * Uses a `Partial<...>` accumulator object (`updates`) to only include the
    * fields that were actually provided. This prevents overwriting a field with
@@ -160,16 +163,22 @@ export class DatabaseStorage implements IStorage {
    * Returns `undefined` (not an error) when the slug isn't found, so the
    * caller (the route handler) can respond with a 404 instead.
    */
-  async updateEventDates(
+  async updateEvent(
     slug: string,
-    startDate?: string,
-    endDate?: string
+    updates: {
+      title?: string | undefined;
+      description?: string | null | undefined;
+      startDate?: string | undefined;
+      endDate?: string | undefined;
+    }
   ): Promise<Event | undefined> {
-    const updates: Partial<typeof events.$inferInsert> = {};
-    if (startDate !== undefined) updates.startDate = startDate;
-    if (endDate !== undefined) updates.endDate = endDate;
+    const update: Partial<typeof events.$inferInsert> = {};
+    if (updates.title !== undefined) update.title = updates.title;
+    if (updates.description !== undefined) update.description = updates.description;
+    if (updates.startDate !== undefined) update.startDate = updates.startDate;
+    if (updates.endDate !== undefined) update.endDate = updates.endDate;
 
-    const [event] = await db.update(events).set(updates).where(eq(events.slug, slug)).returning();
+    const [event] = await db.update(events).set(update).where(eq(events.slug, slug)).returning();
     return event;
   }
 

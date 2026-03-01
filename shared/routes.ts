@@ -145,18 +145,20 @@ export const api = {
     /**
      * update — PATCH /api/events/:slug
      *
-     * Updates an event's date range. Both `startDate` and `endDate` are optional
+     * Updates an event's title, description or date range. All parameters are optional
      * (`.optional()`) because PATCH semantics allow partial updates — the caller
-     * may want to change only one of the two dates.
+     * may want to change only some of the fields.
      *
-     * If neither field is provided, the storage layer will receive two
-     * `undefined` values and effectively perform a no-op update (returning the
-     * unchanged event row). The client always sends at least one field in practice.
+     * If neither field is provided, the storage layer will receive `undefined`
+     * values and effectively perform a no-op update (returning the unchanged
+     * event row). The client always sends at least one field in practice.
      */
     update: {
       method: 'PATCH' as const,
       path: '/api/events/:slug' as const,
       input: z.object({
+        title: z.string().optional(),
+        description: z.string().nullable().optional(),
         startDate: z.string().date().optional(),
         endDate: z.string().date().optional(),
       }),

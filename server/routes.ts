@@ -153,7 +153,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.patch(api.events.update.path, async (req, res) => {
     try {
       const input = api.events.update.input.parse(req.body);
-      const event = await storage.updateEventDates(req.params.slug, input.startDate, input.endDate);
+      const event = await storage.updateEvent(req.params.slug, input);
       if (!event) {
         return res.status(404).json({ message: 'Event not found' });
       }

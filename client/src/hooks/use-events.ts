@@ -132,7 +132,12 @@ export function useUpdateEvent(slug: string) {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (data: { startDate?: string; endDate?: string }) => {
+    mutationFn: async (data: {
+      title?: string;
+      description?: string | null;
+      startDate?: string;
+      endDate?: string;
+    }) => {
       const res = await fetch(buildUrl(api.events.update.path, { slug }), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
