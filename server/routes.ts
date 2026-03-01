@@ -35,6 +35,7 @@
  *   GET    /api/events/:slug        — Fetch event + participants + availabilities
  *   PATCH  /api/events/:slug        — Update event date range
  *   POST   /api/events/:slug/participants — Upsert a participant's availability
+ *   DELETE /api/events/:slug/participants/:participantId — Remove a participant
  */
 
 import type { Express } from 'express';
@@ -210,6 +211,47 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       } else {
         res.status(500).json({ message: 'Internal server error' });
       }
+    }
+  });
+
+  /**
+   * DELETE /api/events/:slug/participants/:participantId — Remove a participant.
+   *
+   * URL parameters: :slug, :participantId (numeric)
+   * Success:        204 No Content (no body)
+   * Errors:         404 if the event or participant is not found, 500 otherwise
+   *
+   * `parseInt(req.params.participantId, 10)` converts the URL string "42" to the
+   * number 42. URL parameters are always strings in Express — without this
+   * conversion, the storage layer would receive a string and the strict equality
+   * checks against numeric DB IDs would silently never match.
+   *
+   * 204 is sent with `res.status(204).end()` rather than `.json(...)` because
+   * 204 No Content means the response body must be empty.
+   */
+  app.delete(api.participants.delete.path, async (req, res) => {
+    try {
+      // Parse the ID to ensure it's an int
+      const participantId = parseInt(req.params.participantId, 10);
+
+      if (isNaN(participantId)) {
+        return res
+          .status(400)
+          .json({ message: `Invalid participant ID ${req.params.participantId}` });
+      }
+
+      const deleted = await storage.deleteParticipant(req.params.slug, participantId);
+
+      if (!deleted) {
+        return res
+          .status(400)
+          .json({ message: `Participant ${participantId} not found in event ${req.params.slug}.` });
+      }
+
+      // All good
+      res.status(204).end();
+    } catch (err) {
+      res.status(500).json({ message: 'Internal server error' });
     }
   });
 

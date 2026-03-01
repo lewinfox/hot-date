@@ -42,10 +42,15 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useRoute, useSearch, Link } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link2, Check, Users, Calendar as CalendarIcon, UserCheck } from 'lucide-react';
+import { Link2, Check, Users, Calendar as CalendarIcon, UserCheck, X } from 'lucide-react';
 import hotDateLogo from '@assets/logo.png';
 import { format } from 'date-fns';
-import { useEvent, useUpdateAvailability, useUpdateEvent } from '@/hooks/use-events';
+import {
+  useEvent,
+  useUpdateAvailability,
+  useUpdateEvent,
+  useDeleteParticipant,
+} from '@/hooks/use-events';
 import { Calendar, PARTICIPANT_COLORS, type ParticipantDateInfo } from '@/components/Calendar';
 import { Input } from '@/components/Input';
 import { Button } from '@/components/Button';
@@ -80,6 +85,7 @@ export default function EventPage() {
   // on the "Save" button was for saving availability or updating the date range.
   const updateAvailability = useUpdateAvailability(slug);
   const updateEvent = useUpdateEvent(slug);
+  const deleteParticipant = useDeleteParticipant(slug);
   const { toast } = useToast();
 
   // localStartDate / localEndDate mirror the server values but update immediately
@@ -743,6 +749,18 @@ export default function EventPage() {
                             data-testid={`copy-link-${p.id}`}
                           >
                             <Link2 className="w-3.5 h-3.5 text-muted-foreground" />
+                          </button>
+                          {/* X button to remove participant from event */}
+                          <button
+                            type="button"
+                            onClick={() => deleteParticipant.mutate(p.id)}
+                            disabled={deleteParticipant.isPending}
+                            className="p-1.5 rounded-lg hover:bg-destructive/10 hover:text-destructive transition-colors shrink-0 ml-1"
+                            title={`Remove ${p.name}`}
+                            aria-label={`Remove ${p.name} from event`}
+                            data-testid={`delete-participant-${p.id}`}
+                          >
+                            <X className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
                           </button>
                         </motion.div>
                       );

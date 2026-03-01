@@ -25,7 +25,8 @@
  *   │   ├── get     — GET    /api/events/:slug
  *   │   └── update  — PATCH  /api/events/:slug
  *   └── participants
- *       └── createOrUpdate — POST /api/events/:slug/participants
+ *       ├── createOrUpdate — POST   /api/events/:slug/participants
+ *       └── delete         — DELETE /api/events/:slug/participants/:participantId
  *
  * `as const` on string literals:
  *   TypeScript normally infers `'POST'` as the broad type `string`. Adding
@@ -203,6 +204,20 @@ export const api = {
       responses: {
         200: participantWithAvailabilitiesSchema,
         400: errorSchemas.validation,
+        404: errorSchemas.notFound,
+      },
+    },
+
+    /**
+     * delete: POST /api/events/:slug/participants/:participantId
+     *
+     * Deletes a participant from the event.
+     */
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/events/:slug/participants/:participantId' as const,
+      responses: {
+        204: z.undefined(), // 204 No Content
         404: errorSchemas.notFound,
       },
     },
