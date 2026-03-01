@@ -215,3 +215,40 @@ export function useUpdateAvailability(slug: string) {
     },
   });
 }
+
+/**
+ * useDeleteParticipant — Mutation hook for removing a participant from an event.
+ *
+ * Call `deleteParticipant.mutate(participantId)` to fire the DELETE request.
+ * On success, the event query is invalidated so the participant list and
+ * heatmap both update immediately to reflect the removal.
+ *
+ * The server returns 204 No Content on success, so there is no response body
+ * to parse — we just check `res.ok` and move on.
+ */
+export function useDeleteParticipant(slug: string) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (participantId: number) => {
+      const res = await fetch(buildUrl(api.participants.delete.path, { slug, participantId }), {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Failed to remove participant');
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.events.get.path, slug] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error removing participant',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}

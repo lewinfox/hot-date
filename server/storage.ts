@@ -61,6 +61,7 @@ export interface IStorage {
     slug: string,
     req: CreateParticipantRequest
   ): Promise<ParticipantWithAvailabilities>;
+  deleteParticipant(slug: string, participantId: number): Promise<boolean>;
   cleanupExpiredEvents(graceDays: number): Promise<number>;
 }
 
@@ -309,6 +310,33 @@ export class DatabaseStorage implements IStorage {
     // We use `req.availabilities` directly (rather than re-querying) because
     // we know they were just inserted successfully.
     return { ...participant, availabilities: req.availabilities };
+  }
+
+  /**
+   * Delete a participant from an event
+   *
+   * @param slug
+   * @param participantId
+   * @returns boolean
+   */
+  async deleteParticipant(slug: string, participantId: number): Promise<boolean> {
+    // Verify that the event exists
+    const [event] = await db.select().from(events).where(eq(events.slug, slug));
+    if (!event) return false;
+
+    // Verify that the participant is associated with the event
+    const [participant] = await db
+      .select()
+      .from(participants)
+      .where(and(eq(participants.eventId, event.id), eq(participants.id, participantId)));
+
+    if (!participant) return false;
+
+    // Delete in the correct order; availability then participant
+    await db.delete(availabilities).where(eq(availabilities.participantId, participant.id));
+    await db.delete(participants).where(eq(participants.id, participantId));
+
+    return true;
   }
 }
 

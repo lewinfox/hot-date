@@ -17,10 +17,42 @@ vi.mock('../../server/db', async () => {
 });
 
 import { db } from '../../server/db';
-import { events, participants, availabilities } from '../../shared/schema';
+import { events, participants, availabilities, Participant } from '../../shared/schema';
 import { DatabaseStorage } from '../../server/storage';
 
 const storage = new DatabaseStorage();
+
+// Helpers
+
+/**
+ * Create a dummy event
+ * @returns Event
+ */
+async function createEvent(): Promise<string> {
+  const event = await storage.createEvent({
+    title: 'Test',
+    description: 'Test',
+    startDate: '2001-01-01',
+    endDate: '2001-01-02',
+  });
+  return event.slug;
+}
+
+/**
+ * Add a participant to an event that already exists.
+ *
+ * @param slug
+ * @param name
+ * @param dates
+ * @returns
+ */
+async function addParticipant(slug: string, name: string, dates: string[] = []): Promise<number> {
+  const p = await storage.addOrUpdateParticipant(slug, {
+    name,
+    availabilities: dates.map((date) => ({ date, type: 'all_day' as const })),
+  });
+  return p.id;
+}
 
 beforeEach(async () => {
   // Clear all tables in dependency order
@@ -236,6 +268,78 @@ describe('DatabaseStorage.addOrUpdateParticipant', () => {
 
     const fetched = await storage.getEventBySlug(event.slug);
     expect(fetched!.participants).toHaveLength(2);
+  });
+});
+
+describe('DatabaseStorage.deleteParticipant', () => {
+  it('returns false when the event does not exist', async () => {
+    const result = await storage.deleteParticipant('abc', 1);
+    expect(result).toBe(false);
+  });
+
+  it('returns false when the participant is not attached to the event', async () => {
+    const event_slug = await createEvent();
+    const result = await storage.deleteParticipant(event_slug, 9999);
+    expect(result).toBe(false);
+  });
+
+  it('deletes a participant from an event', async () => {
+    const slug = await createEvent();
+    const id = await addParticipant(slug, 'Alice');
+    const result = await storage.deleteParticipant(slug, id);
+    expect(result).toBe(true);
+    const event = await storage.getEventBySlug(slug);
+    expect(event?.participants).toHaveLength(0);
+  });
+
+  it("removes the participant's availabilities", async () => {
+    const slug = await createEvent();
+    const id = await addParticipant(slug, 'Bob', ['2026-01-01', '2026-01-02']);
+
+    await storage.deleteParticipant(slug, id);
+
+    // getEventBySlug assembles participants + availabilities — if the
+    // availability rows were left behind, they'd appear here.
+    const event = await storage.getEventBySlug(slug);
+    expect(event?.participants).toHaveLength(0);
+  });
+
+  it('does not affect other participants in the same event', async () => {
+    const slug = await createEvent();
+    const aliceId = await addParticipant(slug, 'Alice', ['2026-01-01']);
+    await addParticipant(slug, 'Bob', ['2026-01-02']);
+
+    await storage.deleteParticipant(slug, aliceId);
+
+    const event = await storage.getEventBySlug(slug);
+    expect(event?.participants).toHaveLength(1);
+    expect(event?.participants[0].name).toBe('Bob');
+    expect(event?.participants[0].availabilities).toHaveLength(1);
+  });
+
+  it('returns false when deleting the same participant twice', async () => {
+    const slug = await createEvent();
+    const id = await addParticipant(slug, 'Alice');
+
+    await storage.deleteParticipant(slug, id);
+    const result = await storage.deleteParticipant(slug, id);
+
+    expect(result).toBe(false);
+  });
+
+  it('cannot delete a participant using a slug from a different event', async () => {
+    const slug1 = await createEvent();
+    const slug2 = await createEvent();
+    const id = await addParticipant(slug1, 'Alice');
+
+    // Correct participant ID but wrong event slug
+    const result = await storage.deleteParticipant(slug2, id);
+
+    expect(result).toBe(false);
+    // Alice should still exist in event 1
+    const event = await storage.getEventBySlug(slug1);
+    expect(event?.participants).toHaveLength(1);
+    expect(event?.participants[0].name).toBe('Alice');
   });
 });
 
