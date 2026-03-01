@@ -178,7 +178,7 @@ export class DatabaseStorage implements IStorage {
     if (updates.startDate !== undefined) update.startDate = updates.startDate;
     if (updates.endDate !== undefined) update.endDate = updates.endDate;
 
-    const [event] = await db.update(events).set(updates).where(eq(events.slug, slug)).returning();
+    const [event] = await db.update(events).set(update).where(eq(events.slug, slug)).returning();
     return event;
   }
 

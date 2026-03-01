@@ -110,6 +110,42 @@ describe('DatabaseStorage.getEventBySlug', () => {
       { date: '2025-06-10', type: 'all_day' },
     ]);
   });
+
+  it('does not mix up availabilities between participants', async () => {
+    const event = await storage.createEvent({
+      title: 'Multi-person Event',
+      startDate: '2025-06-01',
+      endDate: '2025-06-30',
+    });
+
+    await storage.addOrUpdateParticipant(event.slug, {
+      name: 'Alice',
+      availabilities: [
+        { date: '2025-06-10', type: 'all_day' },
+        { date: '2025-06-11', type: 'morning' },
+      ],
+    });
+    await storage.addOrUpdateParticipant(event.slug, {
+      name: 'Bob',
+      availabilities: [{ date: '2025-06-15', type: 'afternoon' }],
+    });
+
+    const fetched = await storage.getEventBySlug(event.slug);
+    const alice = fetched!.participants.find((p: { name: string }) => p.name === 'Alice')!;
+    const bob = fetched!.participants.find((p: { name: string }) => p.name === 'Bob')!;
+
+    expect(alice.availabilities).toHaveLength(2);
+    expect(alice.availabilities).toContainEqual({ date: '2025-06-10', type: 'all_day' });
+    expect(alice.availabilities).toContainEqual({ date: '2025-06-11', type: 'morning' });
+
+    expect(bob.availabilities).toHaveLength(1);
+    expect(bob.availabilities).toContainEqual({ date: '2025-06-15', type: 'afternoon' });
+
+    // Cross-check: neither participant has the other's dates
+    expect(alice.availabilities.map((a: { date: any }) => a.date)).not.toContain('2025-06-15');
+    expect(bob.availabilities.map((a: { date: any }) => a.date)).not.toContain('2025-06-10');
+    expect(bob.availabilities.map((a: { date: any }) => a.date)).not.toContain('2025-06-11');
+  });
 });
 
 describe('DatabaseStorage.addOrUpdateParticipant', () => {
@@ -272,6 +308,32 @@ describe('DatabaseStorage.updateEvent', () => {
     const fetched = await storage.getEventBySlug(event.slug);
     expect(fetched!.startDate).toBe('2025-10-01');
     expect(fetched!.endDate).toBe('2025-10-31');
+  });
+
+  it('does not overwrite fields passed as undefined (Zod partial update shape)', async () => {
+    // Zod's .optional() produces `undefined` (not absent) for unprovided fields,
+    // so the object passed to updateEvent looks like:
+    //   { title: undefined, description: undefined, startDate: '...', endDate: undefined }
+    // The accumulator pattern must filter these out before passing to Drizzle —
+    // this test guards against regressing to .set(rawInput) which would cause a hang.
+    const event = await storage.createEvent({
+      title: 'Keep This Title',
+      description: 'Keep This Description',
+      startDate: '2025-06-01',
+      endDate: '2025-06-30',
+    });
+
+    const updated = await storage.updateEvent(event.slug, {
+      title: undefined,
+      description: undefined,
+      startDate: '2025-07-01',
+      endDate: undefined,
+    });
+
+    expect(updated!.title).toBe('Keep This Title');
+    expect(updated!.description).toBe('Keep This Description');
+    expect(updated!.startDate).toBe('2025-07-01');
+    expect(updated!.endDate).toBe('2025-06-30');
   });
 
   it('does not affect other event fields', async () => {

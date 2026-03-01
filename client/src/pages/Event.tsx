@@ -85,6 +85,8 @@ export default function EventPage() {
   // localStartDate / localEndDate mirror the server values but update immediately
   // on every keystroke so the date inputs feel responsive. The actual server write
   // is deferred to onBlur to avoid a network request on every character typed.
+  const [localTitle, setLocalTitle] = useState('');
+  const [localDescription, setLocalDescription] = useState('');
   const [localStartDate, setLocalStartDate] = useState('');
   const [localEndDate, setLocalEndDate] = useState('');
 
@@ -129,10 +131,12 @@ export default function EventPage() {
   // `event` object so this doesn't run on unrelated participant updates.
   useEffect(() => {
     if (event) {
+      setLocalTitle(event.title ?? '');
+      setLocalDescription(event.description ?? '');
       setLocalStartDate(event.startDate ?? '');
       setLocalEndDate(event.endDate ?? '');
     }
-  }, [event?.startDate, event?.endDate]);
+  }, [event?.title, event?.description, event?.startDate, event?.endDate]);
 
   // When the user's name changes (typed or picked from the participant list) or
   // the server data refreshes, reload their saved availability so they can see
@@ -366,10 +370,34 @@ export default function EventPage() {
               <img src={hotDateLogo} alt="Hot Date" className="w-16 h-auto shrink-0" />
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">{event.title}</h1>
-              {event.description && (
-                <p className="text-sm text-muted-foreground mt-0.5">{event.description}</p>
-              )}
+              {/* Updatable event title */}
+              <input
+                type="text"
+                value={localTitle}
+                onChange={(e) => setLocalTitle(e.target.value)}
+                onBlur={(e) => {
+                  if (e.target.value && e.target.value !== event.title) {
+                    updateEvent.mutate({ title: e.target.value });
+                  }
+                }}
+                className="text-2xl font-bold text-foreground bg-transparent border-b border-transparent hover:border-border/50 focus:border-primary focus:outline-none w-full"
+              />
+              {/* Updatable event description */}
+              <input
+                type="text"
+                value={localDescription}
+                onChange={(e) => {
+                  setLocalDescription(e.target.value);
+                }}
+                onBlur={(e) => {
+                  const newVal = e.target.value || null;
+                  if (newVal !== event.description) {
+                    updateEvent.mutate({ description: newVal });
+                  }
+                }}
+                placeholder="Add a description..."
+                className="text-sm text-muted-foreground bg-transparent border-b border-transparent hover:border-border/50 focus:border-primary focus:outline-none w-full mt-0.5 placeholder:text-muted-foreground/50"
+              />
               <div className="flex items-center gap-2 mt-1.5">
                 <CalendarIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                 {/* The date inputs use localStartDate/localEndDate (not event.startDate)
