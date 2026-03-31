@@ -6,6 +6,7 @@ primary_region = "syd"
 
 [env]
   NODE_ENV = "production"
+  DATABASE_PATH = "/data/hot-date.db"
 
 [[mounts]]
   source = "hot_data_data"
